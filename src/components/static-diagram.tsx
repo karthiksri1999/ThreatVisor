@@ -176,13 +176,13 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
         />
       </div>
        <div className="absolute bottom-4 right-4 flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => handleZoom('out')} aria-label="Zoom out">
+            <Button type="button" variant="outline" size="icon" onClick={() => handleZoom('out')} aria-label="Zoom out">
                 <Minus className="h-4 w-4" />
             </Button>
             <span className="text-sm text-muted-foreground w-12 text-center">
                 {Math.round(zoom * 100)}%
             </span>
-            <Button variant="outline" size="icon" onClick={() => handleZoom('in')} aria-label="Zoom in">
+            <Button type="button" variant="outline" size="icon" onClick={() => handleZoom('in')} aria-label="Zoom in">
                 <Plus className="h-4 w-4" />
             </Button>
        </div>
