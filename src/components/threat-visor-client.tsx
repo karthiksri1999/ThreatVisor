@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TEMPLATES } from '@/lib/templates';
-import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
+import { AlertCircle, Download, FileCode, Link as LinkIcon, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StaticDiagram } from './static-diagram';
@@ -54,6 +54,25 @@ function SubmitButton({ pending }: { pending: boolean }) {
   );
 }
 
+function VulnerabilityLink({ type, id }: { type: 'CVE' | 'CWE'; id: string }) {
+    if (!id) return <>-</>;
+
+    const baseUrl = type === 'CVE' 
+        ? 'https://cve.mitre.org/cgi-bin/cvename.cgi?name=' 
+        : 'https://cwe.mitre.org/data/definitions/';
+    
+    const href = type === 'CWE'
+        ? `${baseUrl}${id.split('-')[1]}.html`
+        : `${baseUrl}${id}`;
+    
+    return (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline hover:text-primary">
+            {id}
+            <LinkIcon className="h-3 w-3" />
+        </a>
+    )
+}
+
 function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutput['threats'], components: Component[] }) {
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
@@ -86,7 +105,7 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
       <Table>
         <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-sm">
           <TableRow>
-            <TableHead className="w-[10%]">
+            <TableHead className="w-[8%]">
                  <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4">
                     Severity
                     {sortOrder === 'desc' && <ArrowDown className="ml-2 h-4 w-4" />}
@@ -94,9 +113,11 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
                 </Button>
             </TableHead>
             <TableHead className="w-[15%]">Affected Component</TableHead>
-            <TableHead className="w-[30%]">Threat</TableHead>
-            <TableHead className="w-[35%]">Mitigation</TableHead>
-            <TableHead className="w-[10%] text-right">CVSS</TableHead>
+            <TableHead className="w-[25%]">Threat</TableHead>
+            <TableHead className="w-[30%]">Mitigation</TableHead>
+            <TableHead className="w-[7%] text-right">CVSS</TableHead>
+            <TableHead className="w-[8%]">CVE</TableHead>
+            <TableHead className="w-[7%]">CWE</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -106,7 +127,9 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
               <TableCell className="font-medium">{componentMap.get(threat.affectedComponentId) || threat.affectedComponentId}</TableCell>
               <TableCell>{threat.threat}</TableCell>
               <TableCell>{threat.mitigation}</TableCell>
-              <TableCell className="text-right font-mono">{threat.cvss || 'N/A'}</TableCell>
+              <TableCell className="text-right font-mono">{threat.cvss || '-'}</TableCell>
+              <TableCell className="font-mono text-xs"><VulnerabilityLink type="CVE" id={threat.cve || ''} /></TableCell>
+              <TableCell className="font-mono text-xs"><VulnerabilityLink type="CWE" id={threat.cwe || ''} /></TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -174,8 +197,8 @@ function ThreatDetailsPanel({ selectedNodeId, threats, components }: { selectedN
                                 <TableCell>{threat.threat}</TableCell>
                                 <TableCell>{threat.mitigation}</TableCell>
                                 <TableCell className="font-mono">{threat.cvss || '-'}</TableCell>
-                                <TableCell className="font-mono">{threat.cve || '-'}</TableCell>
-                                <TableCell className="font-mono">{threat.cwe || '-'}</TableCell>
+                                <TableCell className="font-mono text-xs"><VulnerabilityLink type="CVE" id={threat.cve || ''} /></TableCell>
+                                <TableCell className="font-mono text-xs"><VulnerabilityLink type="CWE" id={threat.cwe || ''} /></TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

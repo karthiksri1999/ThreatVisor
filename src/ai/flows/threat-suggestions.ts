@@ -80,10 +80,10 @@ You will be given an architecture description in a structured format, and a spec
     *   **Threat Description:** Write a clear, concise description of the threat. Example: "An unauthenticated attacker could query the Product Microservice directly, bypassing the API Gateway, to access sensitive product pricing data."
     *   **Severity:** Assign a severity level (\`High\`, \`Medium\`, \`Low\`) based on potential impact.
     *   **Mitigation:** Provide a concrete, actionable mitigation strategy. Example: "Implement network policies (e.g., security groups) to ensure the Product Microservice only accepts traffic from the API Gateway. Implement mutual TLS (mTLS) for service-to-service authentication."
-    *   **Vulnerability Identifiers (CRITICAL):** Where applicable, provide standard identifiers.
+    *   **Vulnerability Identifiers (CRITICAL):** Where applicable, you MUST provide standard identifiers.
         *   **CVSS (MANDATORY):** You MUST provide an estimated CVSS 3.1 base score for every single threat, ranging from 0.0 to 10.0. This field is required.
-        *   **CWE:** Identify the relevant Common Weakness Enumeration (CWE) ID (e.g., CWE-89 for SQL Injection).
-        *   **CVE:** Where applicable, provide a relevant CVE identifier. For example, for a threat like 'SQL Injection' against a 'SQL Database' component, you could cite a well-known, representative CVE for that class of vulnerability (e.g., a famous SQLi CVE). This helps illustrate the threat's real-world impact even if a specific software version isn't provided in the architecture. If a threat is too generic or conceptual to have a direct CVE analog, you may omit this field, but make a strong effort to find an illustrative example.
+        *   **CWE (MANDATORY):** You MUST identify the relevant Common Weakness Enumeration (CWE) ID (e.g., CWE-89 for SQL Injection).
+        *   **CVE (MANDATORY - MAKE BEST EFFORT):** You MUST make a very strong effort to find a relevant, representative CVE identifier for the class of vulnerability described. For example, for a threat like 'SQL Injection' against a 'SQL Database' component, you could cite a well-known, illustrative CVE for that class of vulnerability (e.g., a famous SQLi CVE). This helps contextualize the threat's real-world impact even if a specific software version isn't provided in the architecture. It is critical that you provide a CVE where one is applicable. If a threat is truly too generic or conceptual to have a direct CVE analog, you may omit this field, but only as a last resort.
 
 You must output a list of threats in the specified JSON format. Be comprehensive. The quality and accuracy of your output are paramount.
 `,
