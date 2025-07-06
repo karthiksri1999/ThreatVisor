@@ -21,7 +21,7 @@ import { TEMPLATES } from '@/lib/templates';
 import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InteractiveDiagram } from './interactive-diagram';
+import { StaticDiagram } from './static-diagram';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { Badge } from './ui/badge';
@@ -366,7 +366,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0 p-0">
                         <ResizablePanelGroup direction="vertical">
                             <ResizablePanel defaultSize={70}>
-                                <InteractiveDiagram 
+                                <StaticDiagram 
                                     dsl={dslInput} 
                                     selectedNodeId={selectedNodeId}
                                     onNodeSelect={setSelectedNodeId}
