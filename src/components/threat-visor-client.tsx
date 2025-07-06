@@ -40,11 +40,16 @@ function SubmitButton() {
   return (
     <Button type="submit" disabled={pending} className="w-full">
       {pending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Analyzing...
+        </>
       ) : (
-        <Sparkles className="mr-2 h-4 w-4" />
+        <>
+          <Sparkles className="mr-2 h-4 w-4" />
+          Analyze Threats
+        </>
       )}
-      Analyze Threats
     </Button>
   );
 }
