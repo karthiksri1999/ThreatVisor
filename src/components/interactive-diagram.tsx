@@ -57,7 +57,7 @@ const EditableLabel = ({ initialValue, onSave }: { initialValue: string; onSave:
 };
 
 
-const CustomNode = ({ data, id, selected }: { data: { label: string, type: string, onLabelChange: (id: string, label: string) => void }, id: string, selected: boolean }) => {
+const CustomNode = ({ data, id, selected }: { data: { label: string; type: string; onLabelChange: (id: string, label: string) => void }; id: string; selected: boolean }) => {
     const [isEditing, setIsEditing] = useState(false);
     
     const iconMap: Record<string, string> = {
@@ -220,45 +220,53 @@ export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNod
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [dslError, setDslError] = useState<string | null>(null);
-  const dslRef = useRef(dsl);
 
-  useEffect(() => {
-    dslRef.current = dsl;
-  });
+  // This ref acts as the single source of truth for the current state of the diagram,
+  // represented as a DSL string. This is key to preventing re-render loops.
+  const flowDslRef = useRef<string>(dsl);
 
   const handleNodeLabelChange = useCallback((nodeId: string, newLabel: string) => {
-    setNodes((nds) => {
-        return nds.map((node) => {
-            if (node.id === nodeId) {
-                // creating a new data object to trigger re-render
-                return { ...node, data: { ...node.data, label: newLabel } };
-            }
-            return node;
-        });
-    });
-  }, [setNodes]);
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return { ...node, data: { ...node.data, label: newLabel } };
+        }
+        return node;
+      })
+    );
+  }, []);
 
   const nodeTypes: NodeTypes = useMemo(() => ({
     custom: (props) => <CustomNode {...props} />,
   }), []);
 
-
+  // Sync from parent DSL to React Flow state (e.g., when a template is loaded)
   useEffect(() => {
-    try {
-      const parsedDsl = parseDsl(dsl);
-      // Prevent feedback loop by checking if the visual state already matches the new dsl
-      const currentFlowAsDsl = dumpDsl(flowToDsl(nodes, edges));
-      if (currentFlowAsDsl === dsl) return;
-
-      const { nodes: newNodes, edges: newEdges } = dslToFlow(parsedDsl, handleNodeLabelChange);
-      setNodes(newNodes);
-      setEdges(newEdges);
-      setDslError(null);
-    } catch (e: any) {
-        setDslError(e.message);
+    if (dsl !== flowDslRef.current) {
+        try {
+            const parsedDsl = parseDsl(dsl);
+            const { nodes: newNodes, edges: newEdges } = dslToFlow(parsedDsl, handleNodeLabelChange);
+            setNodes(newNodes);
+            setEdges(newEdges);
+            flowDslRef.current = dsl;
+            setDslError(null);
+        } catch (e: any) {
+            setDslError(e.message);
+        }
     }
-  }, [dsl, handleNodeLabelChange, nodes, edges]);
-  
+  }, [dsl, handleNodeLabelChange]);
+
+  // Sync from React Flow state up to parent (when user interacts with the diagram)
+  useEffect(() => {
+    if (!nodes.length && !edges.length) return;
+
+    const newDslString = dumpDsl(flowToDsl(nodes, edges));
+    if (newDslString !== flowDslRef.current) {
+        flowDslRef.current = newDslString;
+        onDslChange(newDslString);
+    }
+  }, [nodes, edges, onDslChange]);
+
   const onNodesChange: OnNodesChange = useCallback((changes) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
   }, []);
@@ -267,38 +275,28 @@ export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNod
     setEdges((eds) => applyEdgeChanges(changes, eds));
   }, []);
 
-  const onConnect: OnConnect = useCallback((connection) => {
-    const newEdge = { 
-        ...connection, 
-        type: 'smoothstep', 
-        markerEnd: { type: 'arrowclosed' }, 
-        label: `New flow ${edges.length + 1}` 
-    };
-    setEdges((eds) => addEdge(newEdge, eds));
-  }, [edges.length]);
+  const onConnect: OnConnect = useCallback(
+    (connection) => {
+      const newEdge = {
+        ...connection,
+        type: 'smoothstep',
+        markerEnd: { type: 'arrowclosed' },
+        label: `New flow ${edges.length + 1}`,
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
+    [edges.length]
+  );
 
-  useEffect(() => {
-    if (nodes.length === 0 && dslRef.current.length === 0) return;
-    
-    const handler = setTimeout(() => {
-      const newDslObject = flowToDsl(nodes, edges);
-      const newDslString = dumpDsl(newDslObject);
-      if (newDslString !== dslRef.current) {
-        onDslChange(newDslString);
-      }
-    }, 500);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [nodes, edges, onDslChange]);
-  
-  const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+  const handleNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
       onNodeSelect(node.id);
-  }, [onNodeSelect]);
+    },
+    [onNodeSelect]
+  );
 
   const handlePaneClick = useCallback(() => {
-      onNodeSelect(null);
+    onNodeSelect(null);
   }, [onNodeSelect]);
 
   if (dslError) {
