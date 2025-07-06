@@ -226,10 +226,6 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
         }
     };
 
-    const handleDslChange = useCallback((newDsl: string) => {
-        setDslInput(newDsl);
-    }, []);
-
     const components = useMemo(() => {
         try {
             return parseDsl(dslInput).components;
@@ -372,7 +368,6 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                             <ResizablePanel defaultSize={70}>
                                 <InteractiveDiagram 
                                     dsl={dslInput} 
-                                    onDslChange={handleDslChange}
                                     selectedNodeId={selectedNodeId}
                                     onNodeSelect={setSelectedNodeId}
                                 />
