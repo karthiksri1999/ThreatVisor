@@ -153,7 +153,7 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   }
 
   return (
-    <div className="h-full w-full overflow-auto p-4 flex items-center justify-center bg-background relative">
+    <div className="h-full w-full overflow-auto p-4 grid place-items-center bg-background relative">
         <style>
             {`
             .node.selected > rect, .node.selected > path, .node.selected > polygon {
@@ -169,7 +169,7 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
             }
             `}
         </style>
-      <div className="zoom-wrapper" style={{ transform: `scale(${zoom})` }}>
+      <div className="zoom-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}>
         <div
             ref={containerRef}
             className="mermaid-container text-center"

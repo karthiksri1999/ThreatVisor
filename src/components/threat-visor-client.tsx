@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState, useEffect, useState, useCallback, useMemo } from 'react';
+import { useActionState, useEffect, useState, useMemo } from 'react';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -29,6 +29,7 @@ import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { parseDsl, Component } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const initialState = {
@@ -237,6 +238,13 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
     const [dslInput, setDslInput] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
+    const isMobile = useIsMobile();
+    const [isClient, setIsClient] = useState(false);
+    
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
     useEffect(() => {
         const initialContent = TEMPLATES[0].content;
         setDslInput(initialContent);
@@ -250,7 +258,6 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
         }
     };
 
-    // Use components from the analysis state for displaying results.
     const analysisComponents = state.components || [];
     
     const isConfigLocked = isPending || !!state.threats || !!state.error;
@@ -273,9 +280,17 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
             document.body.removeChild(link);
         }
     };
+    
+    if (!isClient) {
+        return (
+             <div className="flex h-full items-center justify-center">
+                <ResultsSkeleton />
+            </div>
+        )
+    }
 
     return (
-        <ResizablePanelGroup direction="horizontal" className="h-full">
+        <ResizablePanelGroup direction={isMobile ? 'vertical' : 'horizontal'} className="h-full">
             <ResizablePanel defaultSize={40} minSize={25}>
                 <div className="flex flex-col h-full p-4 gap-4">
                     <h2 className="text-lg font-semibold tracking-tight">Configuration</h2>
