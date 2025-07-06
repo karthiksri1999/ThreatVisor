@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useEffect, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -102,7 +102,7 @@ function ResultsSkeleton() {
 }
 
 export function ThreatVisorClient() {
-  const [state, formAction] = useFormState(analyzeThreatsAction, initialState);
+  const [state, formAction] = useActionState(analyzeThreatsAction, initialState);
   const [dslInput, setDslInput] = useState(TEMPLATES[0].content);
   const { pending } = useFormStatus();
 
