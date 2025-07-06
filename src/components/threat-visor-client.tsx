@@ -92,7 +92,7 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
         <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-sm">
           <TableRow>
             <TableHead className="w-[10%]">
-                 <Button variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4">
+                 <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4">
                     Severity
                     {sortOrder === 'desc' && <ArrowDown className="ml-2 h-4 w-4" />}
                     {sortOrder === 'asc' && <ArrowUp className="ml-2 h-4 w-4" />}
