@@ -1,7 +1,6 @@
 'use client';
 
 import { useActionState, useEffect, useState, useCallback, useMemo } from 'react';
-import { useFormStatus } from 'react-dom';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -185,10 +184,9 @@ function ResultsSkeleton() {
     )
 }
 
-function ThreatVisorForm({ state }: { state: typeof initialState }) {
+function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isPending: boolean }) {
     const [dslInput, setDslInput] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-    const { pending } = useFormStatus();
 
     useEffect(() => {
         const initialContent = TEMPLATES[0].content;
@@ -215,7 +213,7 @@ function ThreatVisorForm({ state }: { state: typeof initialState }) {
         }
     }, [dslInput]);
     
-    const isConfigLocked = pending || !!state.threats || !!state.error;
+    const isConfigLocked = isPending || !!state.threats || !!state.error;
 
     return (
         <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -268,13 +266,13 @@ function ThreatVisorForm({ state }: { state: typeof initialState }) {
                         </Select>
                     </div>
                     
-                    {isConfigLocked && !pending ? (
+                    {isConfigLocked && !isPending ? (
                         <Button type="button" onClick={() => window.location.reload()} className="w-full">
                             <Wand2 className="mr-2 h-4 w-4" />
                             Start New Analysis
                         </Button>
                     ) : (
-                        <SubmitButton pending={pending} />
+                        <SubmitButton pending={isPending} />
                     )}
 
                     <div className="flex items-center gap-2">
@@ -286,7 +284,7 @@ function ThreatVisorForm({ state }: { state: typeof initialState }) {
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={60} minSize={30}>
             <div className="flex flex-col h-full">
-                {pending ? (
+                {isPending ? (
                     <div className="flex flex-col h-full items-center justify-center p-8">
                     <Wand2 className="h-12 w-12 text-primary animate-pulse" />
                     <p className="mt-4 text-lg font-medium">Analyzing your architecture...</p>
@@ -346,11 +344,11 @@ function ThreatVisorForm({ state }: { state: typeof initialState }) {
 }
 
 export function ThreatVisorClient() {
-  const [state, formAction] = useActionState(analyzeThreatsAction, initialState);
+  const [state, formAction, isPending] = useActionState(analyzeThreatsAction, initialState);
 
   return (
     <form action={formAction} className="h-full">
-      <ThreatVisorForm state={state} />
+      <ThreatVisorForm state={state} isPending={isPending} />
     </form>
   );
 }
