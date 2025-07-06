@@ -34,6 +34,7 @@ import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
 const initialState = {
   threats: null,
   error: null,
+  components: null,
 };
 
 function SubmitButton({ pending }: { pending: boolean }) {
@@ -249,25 +250,20 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
         }
     };
 
-    const components = useMemo(() => {
-        try {
-            return parseDsl(dslInput).components;
-        } catch (e) {
-            return [];
-        }
-    }, [dslInput]);
+    // Use components from the analysis state for displaying results.
+    const analysisComponents = state.components || [];
     
     const isConfigLocked = isPending || !!state.threats || !!state.error;
 
     const handlePdfExport = () => {
-        if (state.threats) {
-            generatePdfReport(state.threats, components, dslInput);
+        if (state.threats && state.components) {
+            generatePdfReport(state.threats, state.components, dslInput);
         }
     };
 
     const handleMarkdownExport = () => {
-        if (state.threats) {
-            const markdownContent = generateMarkdownReport(state.threats, components, dslInput);
+        if (state.threats && state.components) {
+            const markdownContent = generateMarkdownReport(state.threats, state.components, dslInput);
             const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -379,7 +375,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                         </TabsList>
                     </div>
                     <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
-                    {state.threats ? <ThreatsTable threats={state.threats.threats} components={components} /> : (
+                    {state.threats ? <ThreatsTable threats={state.threats.threats} components={analysisComponents} /> : (
                         <div className="flex h-full flex-col items-center justify-center text-center p-8">
                             <ShieldCheck className="h-12 w-12 text-primary/50 mb-4" />
                             <p className="text-muted-foreground">Run an analysis to see the list of threats.</p>
@@ -400,7 +396,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                                 <ThreatDetailsPanel 
                                     selectedNodeId={selectedNodeId}
                                     threats={state.threats?.threats}
-                                    components={components}
+                                    components={analysisComponents}
                                 />
                             </ResizablePanel>
                         </ResizablePanelGroup>

@@ -1,11 +1,12 @@
 'use server';
 
 import { suggestThreatsAndMitigations, ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
-import { parseDsl } from '@/lib/dsl-parser';
+import { parseDsl, Component } from '@/lib/dsl-parser';
 
 interface FormState {
   threats: ThreatSuggestionsOutput | null;
   error: string | null;
+  components: Component[] | null;
 }
 
 export async function analyzeThreatsAction(
@@ -19,12 +20,13 @@ export async function analyzeThreatsAction(
     return {
       threats: null,
       error: 'Missing architecture definition or methodology.',
+      components: null,
     };
   }
 
   try {
     // Validate the DSL syntax before proceeding
-    parseDsl(dsl);
+    const parsedDsl = parseDsl(dsl);
 
     const threats = await suggestThreatsAndMitigations({
       architectureDescription: dsl,
@@ -34,15 +36,17 @@ export async function analyzeThreatsAction(
     if (!threats || !threats.threats) {
         return {
             threats: null,
-            error: 'The AI returned an empty or invalid response. Please try again or adjust your input.'
+            error: 'The AI returned an empty or invalid response. Please try again or adjust your input.',
+            components: null,
         }
     }
 
-    return { threats, error: null };
+    return { threats, error: null, components: parsedDsl.components };
   } catch (e: any) {
     return {
       threats: null,
       error: e.message || 'An unexpected error occurred.',
+      components: null,
     };
   }
 }
