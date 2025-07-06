@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState, useCallback } from 'react';
+import { useActionState, useEffect, useState, useCallback, useMemo } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   ResizableHandle,
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TEMPLATES } from '@/lib/templates';
-import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InteractiveDiagram } from './interactive-diagram';
@@ -26,6 +26,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { parseDsl, Component } from '@/lib/dsl-parser';
+import { cn } from '@/lib/utils';
+
 
 const initialState = {
   threats: null,
@@ -46,7 +50,7 @@ function SubmitButton() {
   );
 }
 
-function ThreatsTable({ threats }: { threats: ThreatSuggestionsOutput['threats'] }) {
+function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutput['threats'], components: Component[] }) {
     const getSeverityVariant = (severity: 'High' | 'Medium' | 'Low') => {
         switch (severity) {
             case 'High': return 'destructive';
@@ -55,30 +59,108 @@ function ThreatsTable({ threats }: { threats: ThreatSuggestionsOutput['threats']
             default: return 'default';
         }
     }
+    const componentMap = useMemo(() => new Map(components.map(c => [c.id, c.name])), [components]);
   return (
      <div className="relative h-full overflow-auto">
       <Table>
         <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-sm">
           <TableRow>
-            <TableHead className="w-1/12">Severity</TableHead>
-            <TableHead className="w-3/12">Affected Component</TableHead>
-            <TableHead className="w-4/12">Threat</TableHead>
-            <TableHead className="w-4/12">Mitigation</TableHead>
+            <TableHead className="w-[10%]">Severity</TableHead>
+            <TableHead className="w-[15%]">Affected Component</TableHead>
+            <TableHead className="w-[30%]">Threat</TableHead>
+            <TableHead className="w-[35%]">Mitigation</TableHead>
+            <TableHead className="w-[10%] text-right">CVSS</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {threats.map((threat, index) => (
             <TableRow key={index}>
               <TableCell><Badge variant={getSeverityVariant(threat.severity)}>{threat.severity}</Badge></TableCell>
-              <TableCell className="font-medium">{threat.affectedComponent}</TableCell>
+              <TableCell className="font-medium">{componentMap.get(threat.affectedComponentId) || threat.affectedComponentId}</TableCell>
               <TableCell>{threat.threat}</TableCell>
               <TableCell>{threat.mitigation}</TableCell>
+              <TableCell className="text-right font-mono">{threat.cvss || 'N/A'}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </div>
   );
+}
+
+function ThreatDetailsPanel({ selectedNodeId, threats, components }: { selectedNodeId: string | null; threats: ThreatSuggestionsOutput['threats'] | undefined; components: Component[] }) {
+    const selectedComponent = useMemo(() => components.find(c => c.id === selectedNodeId), [components, selectedNodeId]);
+    const filteredThreats = useMemo(() => threats?.filter(t => t.affectedComponentId === selectedNodeId) || [], [threats, selectedNodeId]);
+    
+    if (!selectedNodeId || !selectedComponent) {
+        return (
+            <div className="flex h-full items-center justify-center text-center p-4">
+                <div className="text-muted-foreground">
+                    <p>Click on a component in the diagram to view its specific threats.</p>
+                </div>
+            </div>
+        );
+    }
+    
+    const getSeverityVariant = (severity: 'High' | 'Medium' | 'Low') => {
+        switch (severity) {
+            case 'High': return 'destructive';
+            case 'Medium': return 'secondary';
+            case 'Low': return 'outline';
+            default: return 'default';
+        }
+    };
+
+    const iconMap: Record<string, React.FC<any>> = {
+        actor: User,
+        service: Server,
+        datastore: Database,
+    };
+    const Icon = iconMap[selectedComponent.type] || Server;
+
+    return (
+        <div className="h-full flex flex-col p-4 gap-4 overflow-auto">
+            <CardHeader className="flex flex-row items-center gap-4 p-0">
+                <Icon className="h-8 w-8 text-primary" />
+                <div>
+                    <CardTitle>{selectedComponent.name}</CardTitle>
+                    <CardDescription>Threats associated with this component</CardDescription>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0 flex-grow">
+                {filteredThreats.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Severity</TableHead>
+                            <TableHead>Threat</TableHead>
+                            <TableHead>Mitigation</TableHead>
+                            <TableHead>CVSS</TableHead>
+                            <TableHead>CVE</TableHead>
+                            <TableHead>CWE</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredThreats.map((threat, index) => (
+                            <TableRow key={index}>
+                                <TableCell><Badge variant={getSeverityVariant(threat.severity)}>{threat.severity}</Badge></TableCell>
+                                <TableCell>{threat.threat}</TableCell>
+                                <TableCell>{threat.mitigation}</TableCell>
+                                <TableCell className="font-mono">{threat.cvss || '-'}</TableCell>
+                                <TableCell className="font-mono">{threat.cve || '-'}</TableCell>
+                                <TableCell className="font-mono">{threat.cwe || '-'}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+                ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                        <p>No specific threats identified for this component.</p>
+                    </div>
+                )}
+            </CardContent>
+        </div>
+    );
 }
 
 function ResultsSkeleton() {
@@ -103,10 +185,10 @@ function ResultsSkeleton() {
 export function ThreatVisorClient() {
   const [state, formAction] = useActionState(analyzeThreatsAction, initialState);
   const [dslInput, setDslInput] = useState('');
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { pending } = useFormStatus();
 
   useEffect(() => {
-    // Pre-load the first template on initial render
     const initialContent = TEMPLATES[0].content;
     setDslInput(initialContent);
   }, []);
@@ -115,12 +197,21 @@ export function ThreatVisorClient() {
     const template = TEMPLATES.find((t) => t.name === templateName);
     if (template) {
       setDslInput(template.content);
+      setSelectedNodeId(null);
     }
   };
 
   const handleDslChange = useCallback((newDsl: string) => {
     setDslInput(newDsl);
   }, []);
+
+  const components = useMemo(() => {
+      try {
+          return parseDsl(dslInput).components;
+      } catch (e) {
+          return [];
+      }
+  }, [dslInput]);
 
 
   return (
@@ -146,13 +237,13 @@ export function ThreatVisorClient() {
             </div>
             <div className="grid gap-2 flex-1">
                 <label htmlFor="dsl-input" className="text-sm font-medium">
-                    Architecture Definition (YAML/JSON)
+                    Architecture Definition (YAML)
                 </label>
                 <Textarea
                     id="dsl-input"
                     name="dsl"
                     placeholder="Describe your architecture here..."
-                    className="flex-1 font-code text-sm resize-none"
+                    className="flex-1 font-code text-sm resize-none bg-muted/50"
                     value={dslInput}
                     onChange={(e) => setDslInput(e.target.value)}
                     required
@@ -198,7 +289,7 @@ export function ThreatVisorClient() {
                   <AlertDescription>{state.error}</AlertDescription>
                 </Alert>
               </div>
-            ) : state?.threats || dslInput ? (
+            ) : (
               <Tabs defaultValue="threats" className="flex flex-col h-full">
                 <div className="p-4 border-b">
                     <TabsList>
@@ -207,26 +298,34 @@ export function ThreatVisorClient() {
                     </TabsList>
                 </div>
                 <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
-                  {state.threats ? <ThreatsTable threats={state.threats.threats} /> : (
+                  {state.threats ? <ThreatsTable threats={state.threats.threats} components={components} /> : (
                       <div className="flex h-full flex-col items-center justify-center text-center p-8">
-                           <p className="text-muted-foreground">Threat analysis not yet performed.</p>
+                           <ShieldCheck className="h-12 w-12 text-primary/50 mb-4" />
+                           <p className="text-muted-foreground">Run an analysis to see the list of threats.</p>
                       </div>
                   )}
                 </TabsContent>
-                <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0">
-                    <InteractiveDiagram dsl={dslInput} onDslChange={handleDslChange} />
+                <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0 p-0">
+                    <ResizablePanelGroup direction="vertical">
+                        <ResizablePanel defaultSize={70}>
+                            <InteractiveDiagram 
+                                dsl={dslInput} 
+                                onDslChange={handleDslChange}
+                                selectedNodeId={selectedNodeId}
+                                onNodeSelect={setSelectedNodeId}
+                            />
+                        </ResizablePanel>
+                        <ResizableHandle withHandle />
+                        <ResizablePanel defaultSize={30}>
+                            <ThreatDetailsPanel 
+                                selectedNodeId={selectedNodeId}
+                                threats={state.threats?.threats}
+                                components={components}
+                            />
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
                 </TabsContent>
               </Tabs>
-            ) : (
-                <div className="flex h-full flex-col items-center justify-center text-center p-8">
-                    <div className="p-4 rounded-full bg-primary/10 mb-4">
-                        <ShieldCheck className="h-12 w-12 text-primary" />
-                    </div>
-                    <h2 className="text-2xl font-semibold">Welcome to ThreatVisor</h2>
-                    <p className="mt-2 max-w-md text-muted-foreground">
-                        Define your architecture in the panel on the left, select a threat modeling methodology, and click 'Analyze Threats' to begin.
-                    </p>
-                </div>
             )}
           </div>
         </ResizablePanel>

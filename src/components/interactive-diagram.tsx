@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import ReactFlow, {
   addEdge,
   applyEdgeChanges,
@@ -18,60 +18,109 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import { DslInput, parseDsl, dumpDsl, Component as DslComponent, TrustBoundary } from '@/lib/dsl-parser';
-import { useTheme } from 'next-themes';
 
-const CustomNode = ({ data, id, selected }: { data: { label: string, type: string }, id: string, selected: boolean }) => {
+const EditableLabel = ({ initialValue, onSave }: { initialValue: string; onSave: (newValue: string) => void }) => {
+    const [value, setValue] = useState(initialValue);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setValue(initialValue);
+    }, [initialValue]);
+
+    useEffect(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+    }, []);
+
+    const handleBlur = () => {
+        onSave(value);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            onSave(value);
+        } else if (e.key === 'Escape') {
+            onSave(initialValue);
+        }
+    };
+
+    return (
+        <input
+            ref={inputRef}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className="bg-transparent text-center text-white p-0 m-0 w-full focus:outline-none"
+        />
+    );
+};
+
+
+const CustomNode = ({ data, id, selected }: { data: { label: string, type: string, onLabelChange: (id: string, label: string) => void }, id: string, selected: boolean }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    
     const iconMap: Record<string, string> = {
         actor: '👤',
         service: '⚙️',
         datastore: '🗄️',
     };
-    const colorMap: Record<string, string> = {
-        actor: '#3F51B5',
-        service: '#212836',
-        datastore: '#4a148c',
-    }
+
+    const handleDoubleClick = () => {
+        setIsEditing(true);
+    };
+
+    const handleSave = (newLabel: string) => {
+        setIsEditing(false);
+        if (newLabel.trim() !== '' && newLabel !== data.label) {
+            data.onLabelChange(id, newLabel);
+        }
+    };
 
     return (
-        <div style={{
-            padding: '10px 15px',
-            borderRadius: '8px',
-            border: `2px solid ${selected ? '#009688' : (colorMap[data.type] || '#ccc')}`,
-            backgroundColor: colorMap[data.type] || '#eee',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-        }}>
-            <span style={{ fontSize: '1.5rem' }}>{iconMap[data.type] || '📦'}</span>
-            <span>{data.label}</span>
+        <div
+            className={cn(
+                "rounded-lg border-2 p-3 text-white shadow-md flex items-center gap-3 w-48",
+                {
+                    'border-accent': selected,
+                    'border-primary/50 bg-primary/80': data.type === 'actor',
+                    'border-secondary-foreground/50 bg-secondary/80': data.type === 'service',
+                    'border-destructive/50 bg-destructive/80': data.type === 'datastore',
+                }
+            )}
+            onDoubleClick={handleDoubleClick}
+        >
+            <div className="text-2xl">{iconMap[data.type] || '📦'}</div>
+            <div className="flex-grow text-center">
+                {isEditing ? (
+                    <EditableLabel initialValue={data.label} onSave={handleSave} />
+                ) : (
+                    <span>{data.label}</span>
+                )}
+            </div>
         </div>
     );
 };
 
-
-const nodeTypes: NodeTypes = {
-  custom: CustomNode,
-};
-
-const dslToFlow = (dsl: DslInput) => {
+const dslToFlow = (dsl: DslInput, onLabelChange: (id: string, label: string) => void) => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
     if (dsl.trust_boundaries) {
-        dsl.trust_boundaries.forEach((boundary) => {
+        dsl.trust_boundaries.forEach((boundary, i) => {
             nodes.push({
                 id: boundary.id,
                 data: { label: boundary.label },
-                position: { x: 0, y: 0 },
-                className: 'light',
+                position: { x: 50, y: 50 + i * 600 },
                 style: { 
-                    backgroundColor: 'rgba(0, 150, 136, 0.05)',
-                    borderColor: 'rgba(0, 150, 136, 0.3)',
-                    width: '500px',
+                    backgroundColor: 'hsl(var(--accent) / 0.05)',
+                    borderColor: 'hsl(var(--accent) / 0.3)',
+                    borderWidth: 2,
+                    width: '600px',
                     height: '500px',
                 },
                 type: 'group',
+                zIndex: -1,
             });
         });
     }
@@ -91,17 +140,17 @@ const dslToFlow = (dsl: DslInput) => {
         } else {
              if (parentBoundary) {
                 const idx = boundaryComponentIndex[parentBoundary.id] || 0;
-                position = { x: 50 + (idx % 2) * 200, y: 50 + Math.floor(idx / 2) * 120 };
+                position = { x: 50 + (idx % 2) * 250, y: 75 + Math.floor(idx / 2) * 150 };
                 boundaryComponentIndex[parentBoundary.id] = idx + 1;
             } else {
                 const nonBoundaryIndex = dsl.components.filter(c => !componentsInBoundaries.has(c.id)).findIndex(c => c.id === component.id);
-                position = { x: 100 + (nonBoundaryIndex % 4) * 250, y: 600 + Math.floor(nonBoundaryIndex / 4) * 150 };
+                position = { x: 700 + (nonBoundaryIndex % 2) * 250, y: 100 + Math.floor(nonBoundaryIndex / 2) * 150 };
             }
         }
         
         nodes.push({
             id: component.id,
-            data: { label: component.name, type: component.type },
+            data: { label: component.name, type: component.type, onLabelChange },
             position,
             parentNode: parentBoundary?.id,
             extent: parentBoundary ? 'parent' : undefined,
@@ -140,7 +189,7 @@ const flowToDsl = (nodes: Node[], edges: Edge[]): DslInput => {
                 id: node.id,
                 name: node.data.label,
                 type: node.data.type,
-                position: { x: Math.round(node.position.x), y: Math.round(node.position.y) }
+                position: { x: Math.round(node.position?.x || 0), y: Math.round(node.position?.y || 0) }
             });
         }
     });
@@ -163,40 +212,52 @@ const flowToDsl = (nodes: Node[], edges: Edge[]): DslInput => {
 type InteractiveDiagramProps = {
   dsl: string;
   onDslChange: (newDsl: string) => void;
+  selectedNodeId: string | null;
+  onNodeSelect: (nodeId: string | null) => void;
 };
 
-export function InteractiveDiagram({ dsl, onDslChange }: InteractiveDiagramProps) {
+export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNodeId }: InteractiveDiagramProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [dslError, setDslError] = useState<string | null>(null);
   const dslRef = useRef(dsl);
 
-  // Keep dslRef updated with the latest dsl prop on every render.
   useEffect(() => {
     dslRef.current = dsl;
   });
 
-  // This effect syncs the diagram state FROM the dsl prop.
-  // It only runs when the `dsl` prop changes.
-  useEffect(() => {
-    // To prevent loops, we check if the new DSL is what our current flow state would produce.
-    // If it is, then the change likely originated from here, and we can ignore it.
-    const currentFlowAsDsl = dumpDsl(flowToDsl(nodes, edges));
-    if (currentFlowAsDsl === dsl) return;
+  const handleNodeLabelChange = useCallback((nodeId: string, newLabel: string) => {
+    setNodes((nds) => {
+        return nds.map((node) => {
+            if (node.id === nodeId) {
+                // creating a new data object to trigger re-render
+                return { ...node, data: { ...node.data, label: newLabel } };
+            }
+            return node;
+        });
+    });
+  }, [setNodes]);
 
+  const nodeTypes: NodeTypes = useMemo(() => ({
+    custom: (props) => <CustomNode {...props} />,
+  }), []);
+
+
+  useEffect(() => {
     try {
       const parsedDsl = parseDsl(dsl);
-      const { nodes: newNodes, edges: newEdges } = dslToFlow(parsedDsl);
+      // Prevent feedback loop by checking if the visual state already matches the new dsl
+      const currentFlowAsDsl = dumpDsl(flowToDsl(nodes, edges));
+      if (currentFlowAsDsl === dsl) return;
+
+      const { nodes: newNodes, edges: newEdges } = dslToFlow(parsedDsl, handleNodeLabelChange);
       setNodes(newNodes);
       setEdges(newEdges);
       setDslError(null);
     } catch (e: any) {
         setDslError(e.message);
     }
-    // We intentionally disable exhaustive-deps here to break the synchronization loop.
-    // We only want this effect to run when the `dsl` prop changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dsl]);
+  }, [dsl, handleNodeLabelChange]); // eslint-disable-line react-hooks/exhaustive-deps
   
   const onNodesChange: OnNodesChange = useCallback((changes) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
@@ -207,20 +268,21 @@ export function InteractiveDiagram({ dsl, onDslChange }: InteractiveDiagramProps
   }, []);
 
   const onConnect: OnConnect = useCallback((connection) => {
-    setEdges((eds) => addEdge({ ...connection, type: 'smoothstep', markerEnd: { type: 'arrowclosed' }, label: 'New flow' }, eds));
-  }, []);
+    const newEdge = { 
+        ...connection, 
+        type: 'smoothstep', 
+        markerEnd: { type: 'arrowclosed' }, 
+        label: `New flow ${edges.length + 1}` 
+    };
+    setEdges((eds) => addEdge(newEdge, eds));
+  }, [edges.length]);
 
-  // This effect syncs the dsl prop FROM the diagram state.
   useEffect(() => {
-    // Do not run on initial render when nodes are empty.
-    if (nodes.length === 0 && edges.length === 0) {
-      return;
-    }
-
+    if (nodes.length === 0 && dslRef.current.length === 0) return;
+    
     const handler = setTimeout(() => {
       const newDslObject = flowToDsl(nodes, edges);
       const newDslString = dumpDsl(newDslObject);
-      // Use the ref to compare against the latest dsl value.
       if (newDslString !== dslRef.current) {
         onDslChange(newDslString);
       }
@@ -230,6 +292,14 @@ export function InteractiveDiagram({ dsl, onDslChange }: InteractiveDiagramProps
       clearTimeout(handler);
     };
   }, [nodes, edges, onDslChange]);
+  
+  const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+      onNodeSelect(node.id);
+  }, [onNodeSelect]);
+
+  const handlePaneClick = useCallback(() => {
+      onNodeSelect(null);
+  }, [onNodeSelect]);
 
   if (dslError) {
       return (
@@ -251,6 +321,8 @@ export function InteractiveDiagram({ dsl, onDslChange }: InteractiveDiagramProps
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={handleNodeClick}
+        onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         fitView
       >

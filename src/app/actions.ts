@@ -1,10 +1,10 @@
 'use server';
 
-import { suggestThreatsAndMitigations } from '@/ai/flows/threat-suggestions';
+import { suggestThreatsAndMitigations, ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { parseDsl } from '@/lib/dsl-parser';
 
 interface FormState {
-  threats: any | null;
+  threats: ThreatSuggestionsOutput | null;
   error: string | null;
 }
 
