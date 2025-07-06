@@ -14,6 +14,8 @@ import ReactFlow, {
   OnEdgesChange,
   OnConnect,
   NodeTypes,
+  Handle,
+  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { cn } from '@/lib/utils';
@@ -51,7 +53,7 @@ const EditableLabel = ({ initialValue, onSave }: { initialValue: string; onSave:
             onChange={(e) => setValue(e.target.value)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="bg-transparent text-center text-white p-0 m-0 w-full focus:outline-none"
+            className="nodrag bg-transparent text-center text-white p-0 m-0 w-full focus:outline-none"
         />
     );
 };
@@ -80,7 +82,7 @@ const CustomNode = ({ data, id, selected }: { data: { label: string; type: strin
     return (
         <div
             className={cn(
-                "rounded-lg border-2 p-3 text-white shadow-md flex items-center gap-3 w-48",
+                "rounded-lg border-2 p-3 text-white shadow-md flex items-center gap-3 w-48 nodrag",
                 {
                     'border-accent': selected,
                     'border-primary/50 bg-primary/80': data.type === 'actor',
@@ -90,6 +92,10 @@ const CustomNode = ({ data, id, selected }: { data: { label: string; type: strin
             )}
             onDoubleClick={handleDoubleClick}
         >
+            <Handle type="source" position={Position.Top} className="!w-3 !h-3 !bg-teal-500" />
+            <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-teal-500" />
+            <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-teal-500" />
+            <Handle type="source" position={Position.Left} className="!w-3 !h-3 !bg-teal-500" />
             <div className="text-2xl">{iconMap[data.type] || '📦'}</div>
             <div className="flex-grow text-center">
                 {isEditing ? (
@@ -216,13 +222,11 @@ type InteractiveDiagramProps = {
   onNodeSelect: (nodeId: string | null) => void;
 };
 
-export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNodeId }: InteractiveDiagramProps) {
+export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect }: InteractiveDiagramProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [dslError, setDslError] = useState<string | null>(null);
 
-  // This ref acts as the single source of truth for the current state of the diagram,
-  // represented as a DSL string. This is key to preventing re-render loops.
   const flowDslRef = useRef<string>(dsl);
 
   const handleNodeLabelChange = useCallback((nodeId: string, newLabel: string) => {
@@ -240,7 +244,6 @@ export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNod
     custom: (props) => <CustomNode {...props} />,
   }), []);
 
-  // Sync from parent DSL to React Flow state (e.g., when a template is loaded)
   useEffect(() => {
     if (dsl !== flowDslRef.current) {
         try {
@@ -256,14 +259,20 @@ export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNod
     }
   }, [dsl, handleNodeLabelChange]);
 
-  // Sync from React Flow state up to parent (when user interacts with the diagram)
   useEffect(() => {
     if (!nodes.length && !edges.length) return;
 
-    const newDslString = dumpDsl(flowToDsl(nodes, edges));
-    if (newDslString !== flowDslRef.current) {
-        flowDslRef.current = newDslString;
-        onDslChange(newDslString);
+    try {
+        const newDslObject = flowToDsl(nodes, edges);
+        const newDslString = dumpDsl(newDslObject);
+        
+        if (newDslString !== flowDslRef.current) {
+            flowDslRef.current = newDslString;
+            onDslChange(newDslString);
+        }
+    } catch(e) {
+        // This can happen if the flow is in an intermediate invalid state during user edits.
+        // We just ignore it and wait for the user to finish.
     }
   }, [nodes, edges, onDslChange]);
 
@@ -277,6 +286,7 @@ export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNod
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
+        if (connection.source === connection.target) return;
       const newEdge = {
         ...connection,
         type: 'smoothstep',
@@ -323,6 +333,7 @@ export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNod
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         fitView
+        className="react-flow-node-selector"
       >
         <Background />
         <Controls />
