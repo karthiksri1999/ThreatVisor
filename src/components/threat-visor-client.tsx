@@ -55,7 +55,7 @@ function SubmitButton({ pending }: { pending: boolean }) {
 }
 
 function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutput['threats'], components: Component[] }) {
-    const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'none'>('desc');
+    const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
     const getSeverityVariant = (severity: 'High' | 'Medium' | 'Low') => {
         switch (severity) {
@@ -68,16 +68,11 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
     const componentMap = useMemo(() => new Map(components.map(c => [c.id, c.name])), [components]);
     
     const toggleSortOrder = () => {
-        if (sortOrder === 'desc') setSortOrder('asc');
-        else if (sortOrder === 'asc') setSortOrder('none');
-        else setSortOrder('desc');
+        setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
     };
 
     const sortedThreats = useMemo(() => {
         const severityValues: { [key in 'High' | 'Medium' | 'Low']: number } = { High: 3, Medium: 2, Low: 1 };
-        if (sortOrder === 'none') {
-            return threats;
-        }
         return [...threats].sort((a, b) => {
             const valA = severityValues[a.severity];
             const valB = severityValues[b.severity];
