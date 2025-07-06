@@ -7,6 +7,7 @@ interface FormState {
   threats: ThreatSuggestionsOutput | null;
   error: string | null;
   components: Component[] | null;
+  analyzedDsl: string | null;
 }
 
 export async function analyzeThreatsAction(
@@ -21,6 +22,7 @@ export async function analyzeThreatsAction(
       threats: null,
       error: 'Missing architecture definition or methodology.',
       components: null,
+      analyzedDsl: null,
     };
   }
 
@@ -38,15 +40,17 @@ export async function analyzeThreatsAction(
             threats: null,
             error: 'The AI returned an empty or invalid response. Please try again or adjust your input.',
             components: null,
+            analyzedDsl: null,
         }
     }
 
-    return { threats, error: null, components: parsedDsl.components };
+    return { threats, error: null, components: parsedDsl.components, analyzedDsl: dsl };
   } catch (e: any) {
     return {
       threats: null,
       error: e.message || 'An unexpected error occurred.',
       components: null,
+      analyzedDsl: null,
     };
   }
 }

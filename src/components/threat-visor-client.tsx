@@ -27,7 +27,7 @@ import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { parseDsl, Component } from '@/lib/dsl-parser';
+import { Component } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -36,6 +36,7 @@ const initialState = {
   threats: null,
   error: null,
   components: null,
+  analyzedDsl: null,
 };
 
 function SubmitButton({ pending }: { pending: boolean }) {
@@ -110,8 +111,7 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
             <TableHead className="w-[8%]">
                  <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4">
                     Severity
-                    {sortOrder === 'desc' && <ArrowDown className="ml-2 h-4 w-4" />}
-                    {sortOrder === 'asc' && <ArrowUp className="ml-2 h-4 w-4" />}
+                    {sortOrder === 'desc' ? <ArrowDown className="ml-2 h-4 w-4" /> : <ArrowUp className="ml-2 h-4 w-4" />}
                 </Button>
             </TableHead>
             <TableHead className="w-[15%]">Affected Component</TableHead>
@@ -259,18 +259,19 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
     };
 
     const analysisComponents = state.components || [];
+    const dslForDiagram = state.analyzedDsl || dslInput;
     
     const isConfigLocked = isPending || !!state.threats || !!state.error;
 
     const handlePdfExport = () => {
-        if (state.threats && state.components) {
-            generatePdfReport(state.threats, state.components, dslInput);
+        if (state.threats && state.components && state.analyzedDsl) {
+            generatePdfReport(state.threats, state.components, state.analyzedDsl);
         }
     };
 
     const handleMarkdownExport = () => {
-        if (state.threats && state.components) {
-            const markdownContent = generateMarkdownReport(state.threats, state.components, dslInput);
+        if (state.threats && state.components && state.analyzedDsl) {
+            const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl);
             const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -317,7 +318,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                             id="dsl-input"
                             name="dsl"
                             placeholder="Describe your architecture here..."
-                            className="flex-1 font-code text-sm resize-none bg-muted/50"
+                            className="font-code text-sm resize-none bg-muted/50 h-full"
                             value={dslInput}
                             onChange={(e) => setDslInput(e.target.value)}
                             required
@@ -373,7 +374,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     <p className="text-muted-foreground">The AI is identifying potential threats. This may take a moment.</p>
                     <ResultsSkeleton />
                     </div>
-                ) : state?.error ? (
+                ) : state.error ? (
                 <div className="flex h-full items-center justify-center p-8">
                     <Alert variant="destructive" className="max-w-lg">
                     <AlertCircle className="h-4 w-4" />
@@ -381,7 +382,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     <AlertDescription>{state.error}</AlertDescription>
                     </Alert>
                 </div>
-                ) : (
+                ) : state.threats ? (
                 <Tabs defaultValue="threats" className="flex flex-col h-full">
                     <div className="p-4 border-b">
                         <TabsList>
@@ -390,18 +391,13 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                         </TabsList>
                     </div>
                     <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
-                    {state.threats ? <ThreatsTable threats={state.threats.threats} components={analysisComponents} /> : (
-                        <div className="flex h-full flex-col items-center justify-center text-center p-8">
-                            <ShieldCheck className="h-12 w-12 text-primary/50 mb-4" />
-                            <p className="text-muted-foreground">Run an analysis to see the list of threats.</p>
-                        </div>
-                    )}
+                        <ThreatsTable threats={state.threats.threats} components={analysisComponents} />
                     </TabsContent>
                     <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0 p-0">
                         <ResizablePanelGroup direction="vertical">
                             <ResizablePanel defaultSize={70}>
                                 <StaticDiagram 
-                                    dsl={dslInput} 
+                                    dsl={dslForDiagram} 
                                     selectedNodeId={selectedNodeId}
                                     onNodeSelect={setSelectedNodeId}
                                 />
@@ -417,6 +413,14 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                         </ResizablePanelGroup>
                     </TabsContent>
                 </Tabs>
+                ) : (
+                    <div className="flex h-full flex-col items-center justify-center text-center p-8">
+                        <ShieldCheck className="h-12 w-12 text-primary/50 mb-4" />
+                        <h3 className="text-xl font-semibold">Welcome to ThreatVisor</h3>
+                        <p className="text-muted-foreground max-w-sm mx-auto mt-2">
+                            Define your architecture using our YAML-based language, choose a threat modeling methodology, and let our AI do the heavy lifting.
+                        </p>
+                    </div>
                 )}
             </div>
             </ResizablePanel>

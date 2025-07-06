@@ -20,13 +20,15 @@ export function Header() {
           <h1 className="text-xl font-bold tracking-tighter">ThreatVisor</h1>
         </Link>
         <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <Button variant="outline" asChild>
-            <Link href="/login">Login</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/signup">Sign Up</Link>
-          </Button>
+          <div className="hidden md:flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="outline" asChild>
+              <Link href="/login">Login</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/signup">Sign Up</Link>
+            </Button>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -36,12 +38,18 @@ export function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Resources</DropdownMenuLabel>
-              <DropdownMenuItem>Documentation</DropdownMenuItem>
-              <DropdownMenuItem>API Status</DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="#">Documentation</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="#">API Status</Link></DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Account</DropdownMenuLabel>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>About</DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="#">Settings</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link href="#">About</Link></DropdownMenuItem>
+              <DropdownMenuSeparator className="md:hidden" />
+              <div className="md:hidden">
+                <DropdownMenuLabel>Auth</DropdownMenuLabel>
+                 <DropdownMenuItem asChild><Link href="/login">Login</Link></DropdownMenuItem>
+                 <DropdownMenuItem asChild><Link href="/signup">Sign Up</Link></DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
