@@ -28,6 +28,7 @@ import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { parseDsl, Component } from '@/lib/dsl-parser';
+import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
 
 
 const initialState = {
@@ -216,6 +217,25 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
     
     const isConfigLocked = isPending || !!state.threats || !!state.error;
 
+    const handlePdfExport = () => {
+        if (state.threats) {
+            generatePdfReport(state.threats, components, dslInput);
+        }
+    };
+
+    const handleMarkdownExport = () => {
+        if (state.threats) {
+            const markdownContent = generateMarkdownReport(state.threats, components, dslInput);
+            const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'ThreatVisor-Report.md';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
     return (
         <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={40} minSize={25}>
@@ -281,8 +301,12 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     )}
 
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" className="w-full" disabled><Download className="mr-2 h-4 w-4"/> PDF</Button>
-                        <Button variant="outline" className="w-full" disabled><FileCode className="mr-2 h-4 w-4"/> Markdown</Button>
+                        <Button variant="outline" className="w-full" onClick={handlePdfExport} disabled={!state.threats}>
+                            <Download className="mr-2 h-4 w-4"/> PDF
+                        </Button>
+                        <Button variant="outline" className="w-full" onClick={handleMarkdownExport} disabled={!state.threats}>
+                            <FileCode className="mr-2 h-4 w-4"/> Markdown
+                        </Button>
                     </div>
                 </div>
             </ResizablePanel>
