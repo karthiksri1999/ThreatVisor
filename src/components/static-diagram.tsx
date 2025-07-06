@@ -4,14 +4,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { useTheme } from 'next-themes';
 import { parseDsl, DslInput } from '@/lib/dsl-parser';
+import { Button } from './ui/button';
+import { Plus, Minus } from 'lucide-react';
 
 function dslToMermaid(dsl: DslInput): string {
-    // Mermaid doesn't handle some characters well in names/labels, escape them.
     const escape = (str: string) => str.replace(/"/g, '#quot;').replace(/'/g, '`');
     
     let mermaidGraph = 'graph TD;\n';
 
-    // Node definitions with icons
     dsl.components.forEach(c => {
         const iconMap: Record<string, string> = {
             actor: 'fa:fa-user',
@@ -19,19 +19,17 @@ function dslToMermaid(dsl: DslInput): string {
             datastore: 'fa:fa-database',
         };
         const icon = iconMap[c.type] || 'fa:fa-box';
-        // Mermaid format: id["... content ..."]
         mermaidGraph += `    ${c.id}("${escape(c.name)}<br/>[<i class='${icon}'></i> ${escape(c.type)}]");\n`;
     });
 
-    // Data Flows
     dsl.data_flows.forEach(flow => {
         mermaidGraph += `    ${flow.from} -- "${escape(flow.label)}" --> ${flow.to};\n`;
     });
 
-    // Trust Boundaries
     if (dsl.trust_boundaries) {
         dsl.trust_boundaries.forEach(boundary => {
-            mermaidGraph += `\n    subgraph ${escape(boundary.label)}\n`;
+            // Use subgraph id ["label"] for robustness, especially with spaces in labels.
+            mermaidGraph += `\n    subgraph ${boundary.id} ["${escape(boundary.label)}"]\n`;
             boundary.components.forEach(componentId => {
                 mermaidGraph += `        ${componentId}\n`;
             });
@@ -39,7 +37,6 @@ function dslToMermaid(dsl: DslInput): string {
         });
     }
 
-    // Click handlers to link nodes to the details panel
     dsl.components.forEach(c => {
         mermaidGraph += `    click ${c.id} call handleNodeClick("${c.id}") "Click to see details";\n`;
     });
@@ -64,7 +61,6 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   // Mermaid's click handler needs to be on the window object
   useEffect(() => {
     (window as any).handleNodeClick = (nodeId: string) => {
-        // Toggle selection
         onNodeSelect(selectedNodeId === nodeId ? null : nodeId);
     };
     return () => {
@@ -90,7 +86,6 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   useEffect(() => {
     if (!diagram || !containerRef.current) return;
 
-    // Use a key to force React to re-mount the div, ensuring mermaid re-renders cleanly
     const container = containerRef.current;
     container.innerHTML = `<div class="mermaid" key="${Date.now()}">${diagram}</div>`;
     
@@ -105,11 +100,11 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
       },
       themeVariables: {
         background: resolvedTheme === 'dark' ? '#212836' : '#FFFFFF',
-        primaryColor: resolvedTheme === 'dark' ? '#374151' : '#E5E7EB', // gray-700 / gray-200
-        primaryTextColor: resolvedTheme === 'dark' ? '#F9FAFB' : '#111827', // gray-50 / gray-900
-        primaryBorderColor: '#3F51B5', // primary
-        lineColor: resolvedTheme === 'dark' ? '#4B5563' : '#9CA3AF', // gray-600 / gray-400
-        secondaryColor: '#10B981', // emerald-500
+        primaryColor: resolvedTheme === 'dark' ? '#374151' : '#E5E7EB',
+        primaryTextColor: resolvedTheme === 'dark' ? '#F9FAFB' : '#111827',
+        primaryBorderColor: '#3F51B5',
+        lineColor: resolvedTheme === 'dark' ? '#4B5563' : '#9CA3AF',
+        secondaryColor: '#10B981',
       },
       securityLevel: 'loose'
     });
@@ -126,25 +121,23 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
     const svg = containerRef.current.querySelector('svg');
     if (!svg) return;
 
-    // Clear previous selections
     svg.querySelectorAll('.node.selected').forEach(el => el.classList.remove('selected'));
 
     if (selectedNodeId) {
-        // Mermaid uses the node ID for the DOM element ID
         const nodeElement = svg.querySelector(`#${CSS.escape(selectedNodeId)}`);
         if (nodeElement) {
             nodeElement.classList.add('selected');
         }
     }
-   }, [selectedNodeId, diagram, resolvedTheme]); // Rerun on diagram/theme change to re-apply selection
+   }, [selectedNodeId, diagram, resolvedTheme]);
 
 
-  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (event.ctrlKey) {
-      event.preventDefault();
-      const newZoom = zoom - event.deltaY * 0.001;
-      setZoom(Math.min(Math.max(0.5, newZoom), 3));
-    }
+  const handleZoom = (direction: 'in' | 'out') => {
+    const zoomStep = 0.1;
+    setZoom(prevZoom => {
+        const newZoom = direction === 'in' ? prevZoom + zoomStep : prevZoom - zoomStep;
+        return Math.min(Math.max(0.2, newZoom), 2); // Clamp zoom level
+    });
   };
 
   if (dslError) {
@@ -160,10 +153,10 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   }
 
   return (
-    <div onWheel={handleWheel} className="h-full w-full overflow-auto p-4 flex items-center justify-center bg-background relative">
+    <div className="h-full w-full overflow-auto p-4 flex items-center justify-center bg-background relative">
         <style>
             {`
-            .node.selected > rect, .node.selected > path {
+            .node.selected > rect, .node.selected > path, .node.selected > polygon {
                 stroke: hsl(var(--accent)) !important;
                 stroke-width: 4px !important;
             }
@@ -182,9 +175,17 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
             className="mermaid-container text-center"
         />
       </div>
-       <div className="absolute bottom-4 right-4 bg-muted text-muted-foreground text-xs px-2 py-1 rounded-md shadow-md pointer-events-none">
-        Hold Ctrl + Scroll to zoom
-      </div>
+       <div className="absolute bottom-4 right-4 flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => handleZoom('out')} aria-label="Zoom out">
+                <Minus className="h-4 w-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground w-12 text-center">
+                {Math.round(zoom * 100)}%
+            </span>
+            <Button variant="outline" size="icon" onClick={() => handleZoom('in')} aria-label="Zoom in">
+                <Plus className="h-4 w-4" />
+            </Button>
+       </div>
     </div>
   );
 }
