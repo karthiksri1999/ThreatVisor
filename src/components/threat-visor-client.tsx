@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useCallback } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   ResizableHandle,
@@ -21,15 +21,13 @@ import { TEMPLATES } from '@/lib/templates';
 import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { MermaidDiagram } from './mermaid-diagram';
+import { InteractiveDiagram } from './interactive-diagram';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
-import { generateMermaidDiagram } from '@/lib/mermaid-parser';
 
 const initialState = {
-  mermaidDiagram: null,
   threats: null,
   error: null,
 };
@@ -105,39 +103,25 @@ function ResultsSkeleton() {
 export function ThreatVisorClient() {
   const [state, formAction] = useActionState(analyzeThreatsAction, initialState);
   const [dslInput, setDslInput] = useState('');
-  const [mermaidInput, setMermaidInput] = useState('');
   const { pending } = useFormStatus();
 
   useEffect(() => {
     // Pre-load the first template on initial render
     const initialContent = TEMPLATES[0].content;
     setDslInput(initialContent);
-    try {
-      setMermaidInput(generateMermaidDiagram(initialContent));
-    } catch(e) {
-      console.error("Failed to generate initial diagram", e);
-      setMermaidInput('');
-    }
   }, []);
   
-  useEffect(() => {
-    if(state?.mermaidDiagram) {
-        setMermaidInput(state.mermaidDiagram);
-    }
-  }, [state?.mermaidDiagram]);
-
   const handleTemplateChange = (templateName: string) => {
     const template = TEMPLATES.find((t) => t.name === templateName);
     if (template) {
       setDslInput(template.content);
-      try {
-        setMermaidInput(generateMermaidDiagram(template.content));
-      } catch(e) {
-        console.error("Failed to generate diagram for template", e);
-        setMermaidInput('');
-      }
     }
   };
+
+  const handleDslChange = useCallback((newDsl: string) => {
+    setDslInput(newDsl);
+  }, []);
+
 
   return (
     <form action={formAction} className="h-full">
@@ -214,7 +198,7 @@ export function ThreatVisorClient() {
                   <AlertDescription>{state.error}</AlertDescription>
                 </Alert>
               </div>
-            ) : state?.threats || mermaidInput ? (
+            ) : state?.threats || dslInput ? (
               <Tabs defaultValue="threats" className="flex flex-col h-full">
                 <div className="p-4 border-b">
                     <TabsList>
@@ -230,21 +214,7 @@ export function ThreatVisorClient() {
                   )}
                 </TabsContent>
                 <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0">
-                    <ResizablePanelGroup direction="vertical" className="h-full">
-                      <ResizablePanel defaultSize={40} minSize={20}>
-                        <div className="p-2 h-full">
-                           <Textarea
-                              value={mermaidInput}
-                              onChange={(e) => setMermaidInput(e.target.value)}
-                              className="h-full w-full resize-none font-mono text-sm border-0 focus-visible:ring-0"
-                              placeholder="Mermaid diagram code..."/>
-                        </div>
-                      </ResizablePanel>
-                      <ResizableHandle withHandle />
-                      <ResizablePanel defaultSize={60} minSize={20}>
-                        <MermaidDiagram chart={mermaidInput} />
-                      </ResizablePanel>
-                    </ResizablePanelGroup>
+                    <InteractiveDiagram dsl={dslInput} onDslChange={handleDslChange} />
                 </TabsContent>
               </Tabs>
             ) : (

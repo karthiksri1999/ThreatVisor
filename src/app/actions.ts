@@ -1,10 +1,9 @@
 'use server';
 
 import { suggestThreatsAndMitigations } from '@/ai/flows/threat-suggestions';
-import { generateMermaidDiagram } from '@/lib/mermaid-parser';
+import { parseDsl } from '@/lib/dsl-parser';
 
 interface FormState {
-  mermaidDiagram: string | null;
   threats: any | null;
   error: string | null;
 }
@@ -18,14 +17,14 @@ export async function analyzeThreatsAction(
 
   if (!dsl || !methodology) {
     return {
-      mermaidDiagram: null,
       threats: null,
       error: 'Missing architecture definition or methodology.',
     };
   }
 
   try {
-    const mermaidDiagram = generateMermaidDiagram(dsl);
+    // Validate the DSL syntax before proceeding
+    parseDsl(dsl);
 
     const threats = await suggestThreatsAndMitigations({
       architectureDescription: dsl,
@@ -34,16 +33,14 @@ export async function analyzeThreatsAction(
     
     if (!threats || !threats.threats) {
         return {
-            mermaidDiagram: mermaidDiagram,
             threats: null,
             error: 'The AI returned an empty or invalid response. Please try again or adjust your input.'
         }
     }
 
-    return { mermaidDiagram, threats, error: null };
+    return { threats, error: null };
   } catch (e: any) {
     return {
-      mermaidDiagram: null,
       threats: null,
       error: e.message || 'An unexpected error occurred.',
     };
