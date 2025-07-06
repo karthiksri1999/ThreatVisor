@@ -19,7 +19,7 @@ const ThreatSuggestionsInputSchema = z.object({
       'A detailed description of the application architecture, including components, data flows, and trust boundaries.'
     ),
   threatModelingMethodology: z
-    .enum(['STRIDE', 'LINDDUN', 'PASTA'])
+    .enum(['STRIDE', 'LINDDUN', 'PASTA', 'OWASP Top 10', 'OWASP API Top 10', 'MITRE ATT&CK', 'OCTAVE'])
     .describe('The threat modeling methodology to use for threat identification.'),
 });
 
@@ -66,27 +66,14 @@ You will be given an architecture description in a structured format, and a spec
 
 1.  **Deconstruct the Architecture:** Carefully examine every component (actors, services, datastores), every data flow (the connections between components), and every trust boundary. Understand the role of each element.
 
-2.  **Apply the Methodology Rigorously:**
-    *   **If the methodology is STRIDE:** For EACH component and EACH data flow, systematically analyze it for all six STRIDE categories:
-        *   **S**poofing: Could an attacker impersonate a component or user?
-        *   **T**ampering: Could an attacker modify data in transit or at rest?
-        *   **R**epudiation: Could a user deny performing an action?
-        *   **I**nformation Disclosure: Could an attacker access data they are not authorized to see?
-        *   **D**enial of Service: Could an attacker make a component or the system unavailable?
-        *   **E**levation of Privilege: Could an attacker gain rights they are not entitled to?
-    *   **If the methodology is LINDDUN:** For EACH component and EACH data flow, focus on privacy threats. Systematically analyze for all seven LINDDUN categories:
-        *   **L**inkability: Can an attacker link two pieces of information or actions?
-        *   **I**dentifiability: Can an attacker identify a user from the data?
-        *   **N**on-repudiation: How does the system prove a user's actions (this is a privacy concern when it's *too* strong)?
-        *   **D**etectability: Can an attacker determine if an item of interest exists in the system?
-        *   **D**ata Disclosure: Is personally identifiable information (PII) being exposed?
-        *   **U**nawareness: Are users unaware of how their data is being collected and processed?
-        *   **N**on-compliance: Does the system fail to comply with privacy regulations (like GDPR, CCPA)?
-    *   **If the methodology is PASTA (Process for Attack Simulation and Threat Analysis):** Adopt a risk-centric, attacker-focused mindset. Identify realistic attack vectors. For each potential attack:
-        *   Identify the business impact.
-        *   Enumerate the steps an attacker would take (the attack tree).
-        *   Identify the vulnerabilities that would be exploited.
-        *   Map threats to these vulnerabilities.
+2.  **Apply the Methodology Rigorously:** Based on the selected \`threatModelingMethodology\`, perform the following analysis:
+    *   **If STRIDE:** For EACH component and EACH data flow, systematically analyze it for all six STRIDE categories: Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege.
+    *   **If LINDDUN:** For EACH component and EACH data flow, focus on privacy threats. Systematically analyze for all seven LINDDUN categories: Linkability, Identifiability, Non-repudiation, Detectability, Data Disclosure, Unawareness, Non-compliance.
+    *   **If PASTA (Process for Attack Simulation and Threat Analysis):** Adopt a risk-centric, attacker-focused mindset. Define business objectives, decompose the application, and conduct attack simulations to identify threats.
+    *   **If OWASP Top 10:** Analyze the architecture against the most recent OWASP Top 10 for Web Applications. For each relevant component (e.g., web frontends, APIs), identify vulnerabilities like Injection, Broken Authentication, Sensitive Data Exposure, etc.
+    *   **If OWASP API Top 10:** Specifically focus on the APIs (e.g., components like 'api_gateway', 'auth_service'). Analyze for vulnerabilities like Broken Object Level Authorization, Broken User Authentication, Excessive Data Exposure, etc.
+    *   **If MITRE ATT&CK:** Map the components and data flows to the ATT&CK framework. Identify potential adversary tactics and techniques that could be used to compromise the system, such as Initial Access, Execution, Persistence, etc.
+    *   **If OCTAVE (Operationally Critical Threat, Asset, and Vulnerability Evaluation):** Focus on organizational risk. Identify critical assets and the threats to them. This is a broader, risk-management view.
 
 3.  **Generate Specific and Actionable Threats:**
     *   For each threat you identify, you MUST associate it with the specific \`affectedComponentId\` from the input architecture. If a threat affects a data flow, assign it to the *target* component of that flow.

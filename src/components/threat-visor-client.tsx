@@ -262,6 +262,10 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                                 <SelectItem value="STRIDE">STRIDE</SelectItem>
                                 <SelectItem value="LINDDUN">LINDDUN</SelectItem>
                                 <SelectItem value="PASTA">PASTA</SelectItem>
+                                <SelectItem value="OWASP Top 10">OWASP Top 10</SelectItem>
+                                <SelectItem value="OWASP API Top 10">OWASP API Top 10</SelectItem>
+                                <SelectItem value="MITRE ATT&CK">MITRE ATT&CK</SelectItem>
+                                <SelectItem value="OCTAVE">OCTAVE</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

@@ -13,7 +13,7 @@ export async function analyzeThreatsAction(
   formData: FormData
 ): Promise<FormState> {
   const dsl = formData.get('dsl') as string;
-  const methodology = formData.get('methodology') as 'STRIDE' | 'LINDDUN' | 'PASTA';
+  const methodology = formData.get('methodology') as 'STRIDE' | 'LINDDUN' | 'PASTA' | 'OWASP Top 10' | 'OWASP API Top 10' | 'MITRE ATT&CK' | 'OCTAVE';
 
   if (!dsl || !methodology) {
     return {
