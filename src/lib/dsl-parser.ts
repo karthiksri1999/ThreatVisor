@@ -4,7 +4,6 @@ export interface Component {
   id: string;
   name: string;
   type: 'actor' | 'service' | 'datastore' | string;
-  position?: { x: number; y: number };
 }
 
 export interface DataFlow {
@@ -38,8 +37,18 @@ export function parseDsl(dsl: string): DslInput {
         "Invalid DSL format: The parsed content must be an object containing 'components' and 'data_flows' keys."
       );
     }
+    
+    // Ensure components without position property don't cause issues downstream
+    const cleanParsed = parsed as DslInput;
+    if (cleanParsed.components) {
+        cleanParsed.components.forEach(c => {
+            if ('position' in c) {
+                delete (c as any).position;
+            }
+        });
+    }
 
-    return parsed as DslInput;
+    return cleanParsed;
   } catch (e: any) {
     // If yaml.load fails, it could be a syntax error in either YAML or JSON
     throw new Error(
@@ -49,9 +58,18 @@ export function parseDsl(dsl: string): DslInput {
 }
 
 export function dumpDsl(dslObject: DslInput): string {
-  const objToDump = { ...dslObject };
+  const objToDump: any = { ...dslObject };
   if (objToDump.trust_boundaries && objToDump.trust_boundaries.length === 0) {
     delete objToDump.trust_boundaries;
   }
-  return yaml.dump(objToDump, { skipInvalid: true });
+  
+  // Ensure no position property is written
+  if (objToDump.components) {
+      objToDump.components = objToDump.components.map((c: any) => {
+          const { position, ...rest } = c;
+          return rest;
+      });
+  }
+  
+  return yaml.dump(objToDump, { skipInvalid: true, sortKeys: true });
 }

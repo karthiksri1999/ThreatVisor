@@ -16,10 +16,51 @@ import ReactFlow, {
   NodeTypes,
   Handle,
   Position,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { cn } from '@/lib/utils';
 import { DslInput, parseDsl, dumpDsl, Component as DslComponent, TrustBoundary } from '@/lib/dsl-parser';
+import ELK from 'elkjs/lib/elk.bundled.js';
+
+const elk = new ELK();
+
+const elkOptions = {
+  'elk.algorithm': 'layered',
+  'elk.direction': 'DOWN',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '100',
+  'elk.spacing.nodeNode': '80',
+  'elk.layered.unnecessaryBendpoints': 'true',
+};
+
+const getLayoutedElements = async (nodes: Node[], edges: Edge[]): Promise<{ nodes: Node[], edges: Edge[] }> => {
+    const graph = {
+        id: 'root',
+        layoutOptions: elkOptions,
+        children: nodes.map(node => ({
+            ...node,
+            width: 192,
+            height: 68,
+        })),
+        edges: edges,
+    };
+
+    const layoutedGraph = await elk.layout(graph);
+    
+    const layoutedNodes = nodes.map(node => {
+        const nodeFromLayout = layoutedGraph.children?.find(n => n.id === node.id);
+        if (nodeFromLayout) {
+            return {
+                ...node,
+                position: { x: nodeFromLayout.x, y: nodeFromLayout.y }
+            };
+        }
+        return node;
+    });
+
+    return { nodes: layoutedNodes, edges: layoutedGraph.edges ?? edges };
+};
+
 
 const EditableLabel = ({ initialValue, onSave }: { initialValue: string; onSave: (newValue: string) => void }) => {
     const [value, setValue] = useState(initialValue);
@@ -93,9 +134,13 @@ const CustomNode = ({ data, id, selected }: { data: { label: string; type: strin
             onDoubleClick={handleDoubleClick}
         >
             <Handle type="source" position={Position.Top} className="!w-3 !h-3 !bg-teal-500" />
+            <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-teal-500" />
             <Handle type="source" position={Position.Right} className="!w-3 !h-3 !bg-teal-500" />
+            <Handle type="target" position={Position.Right} className="!w-3 !h-3 !bg-teal-500" />
             <Handle type="source" position={Position.Bottom} className="!w-3 !h-3 !bg-teal-500" />
+            <Handle type="target" position={Position.Bottom} className="!w-3 !h-3 !bg-teal-500" />
             <Handle type="source" position={Position.Left} className="!w-3 !h-3 !bg-teal-500" />
+            <Handle type="target" position={Position.Left} className="!w-3 !h-3 !bg-teal-500" />
             <div className="text-2xl">{iconMap[data.type] || '📦'}</div>
             <div className="flex-grow text-center">
                 {isEditing ? (
@@ -108,61 +153,41 @@ const CustomNode = ({ data, id, selected }: { data: { label: string; type: strin
     );
 };
 
-const dslToFlow = (dsl: DslInput, onLabelChange: (id: string, label: string) => void) => {
+const dslToFlowElements = (dsl: DslInput, onLabelChange: (id: string, label: string) => void) => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
+    // Note: Advanced group layouting with ELK is complex.
+    // This implementation will layout components and draw trust boundaries around them later.
+    // For now, we'll create the component nodes and edges for layouting.
+
+    dsl.components.forEach((component) => {
+        const parentBoundary = dsl.trust_boundaries?.find(b => b.components.includes(component.id));
+        nodes.push({
+            id: component.id,
+            data: { label: component.name, type: component.type, onLabelChange },
+            position: { x: 0, y: 0 }, // Placeholder for auto-layout
+            parentNode: parentBoundary?.id,
+            extent: parentBoundary ? 'parent' : undefined,
+            type: 'custom',
+        });
+    });
+
     if (dsl.trust_boundaries) {
-        dsl.trust_boundaries.forEach((boundary, i) => {
+        dsl.trust_boundaries.forEach((boundary) => {
             nodes.push({
                 id: boundary.id,
                 data: { label: boundary.label },
-                position: { x: 50, y: 50 + i * 600 },
-                style: { 
+                position: { x: 0, y: 0 },
+                className: 'light:bg-slate-100 dark:bg-slate-900 !border-accent/50',
+                style: {
                     backgroundColor: 'hsl(var(--accent) / 0.05)',
-                    borderColor: 'hsl(var(--accent) / 0.3)',
-                    borderWidth: 2,
-                    width: '600px',
-                    height: '500px',
                 },
                 type: 'group',
                 zIndex: -1,
             });
         });
     }
-    
-    const componentsInBoundaries = new Set<string>();
-    if(dsl.trust_boundaries) {
-        dsl.trust_boundaries.forEach(b => b.components.forEach(c => componentsInBoundaries.add(c)));
-    }
-    
-    let boundaryComponentIndex: { [key: string]: number } = {};
-    
-    dsl.components.forEach((component) => {
-        const parentBoundary = dsl.trust_boundaries?.find(b => b.components.includes(component.id));
-        let position;
-        if (component.position) {
-            position = component.position;
-        } else {
-             if (parentBoundary) {
-                const idx = boundaryComponentIndex[parentBoundary.id] || 0;
-                position = { x: 50 + (idx % 2) * 250, y: 75 + Math.floor(idx / 2) * 150 };
-                boundaryComponentIndex[parentBoundary.id] = idx + 1;
-            } else {
-                const nonBoundaryIndex = dsl.components.filter(c => !componentsInBoundaries.has(c.id)).findIndex(c => c.id === component.id);
-                position = { x: 700 + (nonBoundaryIndex % 2) * 250, y: 100 + Math.floor(nonBoundaryIndex / 2) * 150 };
-            }
-        }
-        
-        nodes.push({
-            id: component.id,
-            data: { label: component.name, type: component.type, onLabelChange },
-            position,
-            parentNode: parentBoundary?.id,
-            extent: parentBoundary ? 'parent' : undefined,
-            type: 'custom',
-        });
-    });
 
     dsl.data_flows.forEach((flow, index) => {
         edges.push({
@@ -190,12 +215,11 @@ const flowToDsl = (nodes: Node[], edges: Edge[]): DslInput => {
                 label: node.data.label,
                 components: nodes.filter(n => n.parentNode === node.id).map(n => n.id)
             });
-        } else if (node.data.label) {
+        } else if (node.type === 'custom' && node.data.label) {
             components.push({
                 id: node.id,
                 name: node.data.label,
                 type: node.data.type,
-                position: { x: Math.round(node.position?.x || 0), y: Math.round(node.position?.y || 0) }
             });
         }
     });
@@ -222,123 +246,147 @@ type InteractiveDiagramProps = {
   onNodeSelect: (nodeId: string | null) => void;
 };
 
-export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect }: InteractiveDiagramProps) {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
-  const [dslError, setDslError] = useState<string | null>(null);
+function DiagramLayout({ dsl, onDslChange, onNodeSelect }: InteractiveDiagramProps) {
+    const [nodes, setNodes] = useState<Node[]>([]);
+    const [edges, setEdges] = useState<Edge[]>([]);
+    const [dslError, setDslError] = useState<string | null>(null);
+    const { fitView } = useReactFlow();
+  
+    const handleNodeLabelChange = useCallback((nodeId: string, newLabel: string) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return { ...node, data: { ...node.data, label: newLabel } };
+          }
+          return node;
+        })
+      );
+    }, []);
+  
+    const nodeTypes: NodeTypes = useMemo(() => ({
+      custom: (props) => <CustomNode {...props} />,
+    }), []);
+  
+    useEffect(() => {
+        let isMounted = true;
+        const layout = async () => {
+            try {
+                const parsedDsl = parseDsl(dsl);
+                const { nodes: initialNodes, edges: initialEdges } = dslToFlowElements(parsedDsl, handleNodeLabelChange);
+                
+                if (initialNodes.length === 0) {
+                    if (isMounted) {
+                        setNodes([]);
+                        setEdges([]);
+                        setDslError(null);
+                    }
+                    return;
+                }
 
-  const flowDslRef = useRef<string>(dsl);
+                const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(initialNodes, initialEdges);
 
-  const handleNodeLabelChange = useCallback((nodeId: string, newLabel: string) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === nodeId) {
-          return { ...node, data: { ...node.data, label: newLabel } };
-        }
-        return node;
-      })
-    );
-  }, []);
+                if (isMounted) {
+                    setNodes(layoutedNodes);
+                    setEdges(layoutedEdges);
+                    setDslError(null);
+                    // Defer fitView to ensure nodes are rendered
+                    setTimeout(() => fitView({ duration: 400 }), 10);
+                }
+            } catch (e: any) {
+                if (isMounted) {
+                    setDslError(e.message);
+                }
+            }
+        };
+        layout();
 
-  const nodeTypes: NodeTypes = useMemo(() => ({
-    custom: (props) => <CustomNode {...props} />,
-  }), []);
-
-  useEffect(() => {
-    if (dsl !== flowDslRef.current) {
-        try {
-            const parsedDsl = parseDsl(dsl);
-            const { nodes: newNodes, edges: newEdges } = dslToFlow(parsedDsl, handleNodeLabelChange);
-            setNodes(newNodes);
-            setEdges(newEdges);
-            flowDslRef.current = dsl;
-            setDslError(null);
-        } catch (e: any) {
-            setDslError(e.message);
-        }
-    }
-  }, [dsl, handleNodeLabelChange]);
-
-  useEffect(() => {
-    if (!nodes.length && !edges.length) return;
-
-    try {
+        return () => { isMounted = false; };
+    }, [dsl, handleNodeLabelChange, fitView]);
+  
+    useEffect(() => {
+        if (!nodes.length && !edges.length) return;
         const newDslObject = flowToDsl(nodes, edges);
         const newDslString = dumpDsl(newDslObject);
-        
-        if (newDslString !== flowDslRef.current) {
-            flowDslRef.current = newDslString;
+        const oldDslObject = parseDsl(dsl);
+        const oldDslString = dumpDsl(oldDslObject);
+        if (newDslString !== oldDslString) {
             onDslChange(newDslString);
         }
-    } catch(e) {
-        // This can happen if the flow is in an intermediate invalid state during user edits.
-        // We just ignore it and wait for the user to finish.
-    }
-  }, [nodes, edges, onDslChange]);
-
-  const onNodesChange: OnNodesChange = useCallback((changes) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
-  }, []);
-
-  const onEdgesChange: OnEdgesChange = useCallback((changes) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
-  }, []);
-
-  const onConnect: OnConnect = useCallback(
-    (connection) => {
-        if (connection.source === connection.target) return;
-      const newEdge = {
-        ...connection,
-        type: 'smoothstep',
-        markerEnd: { type: 'arrowclosed' },
-        label: `New flow ${edges.length + 1}`,
-      };
-      setEdges((eds) => addEdge(newEdge, eds));
-    },
-    [edges.length]
-  );
-
-  const handleNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => {
-      onNodeSelect(node.id);
-    },
-    [onNodeSelect]
-  );
-
-  const handlePaneClick = useCallback(() => {
-    onNodeSelect(null);
-  }, [onNodeSelect]);
-
-  if (dslError) {
-      return (
-          <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md h-full flex items-center justify-center">
-            <div>
-              <h3 className="font-semibold">DSL Error</h3>
-              <p className="text-sm">Please fix the syntax in the editor.</p>
-              <pre className="mt-2 text-sm whitespace-pre-wrap font-code bg-destructive/10 p-2 rounded">{dslError}</pre>
+    }, [nodes, edges, dsl, onDslChange]);
+  
+    const onNodesChange: OnNodesChange = useCallback((changes) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    }, []);
+  
+    const onEdgesChange: OnEdgesChange = useCallback((changes) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+    }, []);
+  
+    const onConnect: OnConnect = useCallback(
+      (connection) => {
+          if (connection.source === connection.target) return;
+        const newEdge = {
+          ...connection,
+          id: `e-${connection.source}-${connection.target}-${Math.random()}`,
+          type: 'smoothstep',
+          markerEnd: { type: 'arrowclosed' },
+          label: `New flow`,
+        };
+        setEdges((eds) => addEdge(newEdge, eds));
+      },
+      []
+    );
+  
+    const handleNodeClick = useCallback(
+      (_: React.MouseEvent, node: Node) => {
+        onNodeSelect(node.id);
+      },
+      [onNodeSelect]
+    );
+  
+    const handlePaneClick = useCallback(() => {
+      onNodeSelect(null);
+    }, [onNodeSelect]);
+  
+    if (dslError) {
+        return (
+            <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md h-full flex items-center justify-center">
+              <div>
+                <h3 className="font-semibold">DSL Error</h3>
+                <p className="text-sm">Please fix the syntax in the editor.</p>
+                <pre className="mt-2 text-sm whitespace-pre-wrap font-code bg-destructive/10 p-2 rounded">{dslError}</pre>
+              </div>
             </div>
-          </div>
-      );
+        );
+    }
+  
+    return (
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={handleNodeClick}
+          onPaneClick={handlePaneClick}
+          nodeTypes={nodeTypes}
+          fitView
+          className="react-flow-node-selector"
+        >
+          <Background />
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
+    );
   }
 
-  return (
-    <div style={{ height: '100%', width: '100%', background: 'hsl(var(--background))' }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={handleNodeClick}
-        onPaneClick={handlePaneClick}
-        nodeTypes={nodeTypes}
-        fitView
-        className="react-flow-node-selector"
-      >
-        <Background />
-        <Controls />
-        <MiniMap />
-      </ReactFlow>
-    </div>
-  );
+
+export function InteractiveDiagram(props: InteractiveDiagramProps) {
+    return (
+        <div style={{ height: '100%', width: '100%', background: 'hsl(var(--background))' }}>
+            <ReactFlowProvider>
+                <DiagramLayout {...props} />
+            </ReactFlowProvider>
+        </div>
+    );
 }
