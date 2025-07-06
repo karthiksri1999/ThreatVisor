@@ -35,8 +35,7 @@ const initialState = {
   error: null,
 };
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+function SubmitButton({ pending }: { pending: boolean }) {
   return (
     <Button type="submit" disabled={pending} className="w-full">
       {pending ? (
@@ -275,7 +274,7 @@ function ThreatVisorForm({ state }: { state: typeof initialState }) {
                             Start New Analysis
                         </Button>
                     ) : (
-                        <SubmitButton />
+                        <SubmitButton pending={pending} />
                     )}
 
                     <div className="flex items-center gap-2">
