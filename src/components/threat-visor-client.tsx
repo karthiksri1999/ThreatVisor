@@ -301,10 +301,10 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     )}
 
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" className="w-full" onClick={handlePdfExport} disabled={!state.threats}>
+                        <Button type="button" variant="outline" className="w-full" onClick={handlePdfExport} disabled={!state.threats}>
                             <Download className="mr-2 h-4 w-4"/> PDF
                         </Button>
-                        <Button variant="outline" className="w-full" onClick={handleMarkdownExport} disabled={!state.threats}>
+                        <Button type="button" variant="outline" className="w-full" onClick={handleMarkdownExport} disabled={!state.threats}>
                             <FileCode className="mr-2 h-4 w-4"/> Markdown
                         </Button>
                     </div>
