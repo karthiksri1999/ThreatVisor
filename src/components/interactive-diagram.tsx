@@ -16,7 +16,7 @@ import ReactFlow, {
   NodeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-
+import { cn } from '@/lib/utils';
 import { DslInput, parseDsl, dumpDsl, Component as DslComponent, TrustBoundary } from '@/lib/dsl-parser';
 
 const EditableLabel = ({ initialValue, onSave }: { initialValue: string; onSave: (newValue: string) => void }) => {
@@ -257,7 +257,7 @@ export function InteractiveDiagram({ dsl, onDslChange, onNodeSelect, selectedNod
     } catch (e: any) {
         setDslError(e.message);
     }
-  }, [dsl, handleNodeLabelChange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dsl, handleNodeLabelChange, nodes, edges]);
   
   const onNodesChange: OnNodesChange = useCallback((changes) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
