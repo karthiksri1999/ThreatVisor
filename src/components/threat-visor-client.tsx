@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect, useState, useCallback, useMemo } from 'react';
@@ -235,7 +236,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="grid gap-2 flex-1">
+                    <div className="flex flex-col gap-2 flex-1 min-h-0">
                         <label htmlFor="dsl-input" className="text-sm font-medium">
                             Architecture Definition (YAML or JSON)
                         </label>
