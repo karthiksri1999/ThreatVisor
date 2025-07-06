@@ -83,7 +83,7 @@ You will be given an architecture description in a structured format, and a spec
     *   **Vulnerability Identifiers (CRITICAL):** Where applicable, provide standard identifiers.
         *   **CVSS (MANDATORY):** You MUST provide an estimated CVSS 3.1 base score for every single threat, ranging from 0.0 to 10.0. This field is required.
         *   **CWE:** Identify the relevant Common Weakness Enumeration (CWE) ID (e.g., CWE-89 for SQL Injection).
-        *   **CVE:** If the threat relates to a known vulnerability in a technology type described (e.g., a specific version of a library, if mentioned), provide the CVE identifier. If not, omit this field.
+        *   **CVE:** Where applicable, provide a relevant CVE identifier. For example, for a threat like 'SQL Injection' against a 'SQL Database' component, you could cite a well-known, representative CVE for that class of vulnerability (e.g., a famous SQLi CVE). This helps illustrate the threat's real-world impact even if a specific software version isn't provided in the architecture. If a threat is too generic or conceptual to have a direct CVE analog, you may omit this field, but make a strong effort to find an illustrative example.
 
 You must output a list of threats in the specified JSON format. Be comprehensive. The quality and accuracy of your output are paramount.
 `,

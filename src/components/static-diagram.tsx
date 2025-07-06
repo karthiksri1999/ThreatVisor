@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { useTheme } from 'next-themes';
 import { parseDsl, DslInput } from '@/lib/dsl-parser';
@@ -59,6 +59,7 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   const [diagram, setDiagram] = useState('');
   const [dslError, setDslError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
 
   // Mermaid's click handler needs to be on the window object
   useEffect(() => {
@@ -138,6 +139,14 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
    }, [selectedNodeId, diagram, resolvedTheme]); // Rerun on diagram/theme change to re-apply selection
 
 
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (event.ctrlKey) {
+      event.preventDefault();
+      const newZoom = zoom - event.deltaY * 0.001;
+      setZoom(Math.min(Math.max(0.5, newZoom), 3));
+    }
+  };
+
   if (dslError) {
     return (
         <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md h-full flex items-center justify-center">
@@ -151,23 +160,31 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   }
 
   return (
-    <div className="h-full w-full overflow-auto p-4 flex items-center justify-center bg-background">
+    <div onWheel={handleWheel} className="h-full w-full overflow-auto p-4 flex items-center justify-center bg-background relative">
         <style>
             {`
             .node.selected > rect, .node.selected > path {
                 stroke: hsl(var(--accent)) !important;
                 stroke-width: 4px !important;
             }
-            .mermaid-container > .mermaid > svg {
-                max-width: 100%;
+            .mermaid-container .mermaid svg {
+                max-width: none !important;
                 height: auto;
+            }
+            .zoom-wrapper {
+                transition: transform 0.1s ease-in-out;
             }
             `}
         </style>
-      <div
-        ref={containerRef}
-        className="mermaid-container w-full h-full text-center"
-      />
+      <div className="zoom-wrapper" style={{ transform: `scale(${zoom})` }}>
+        <div
+            ref={containerRef}
+            className="mermaid-container text-center"
+        />
+      </div>
+       <div className="absolute bottom-4 right-4 bg-muted text-muted-foreground text-xs px-2 py-1 rounded-md shadow-md pointer-events-none">
+        Hold Ctrl + Scroll to zoom
+      </div>
     </div>
   );
 }
