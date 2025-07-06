@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
+import { generateMermaidDiagram } from '@/lib/mermaid-parser';
 
 const initialState = {
   mermaidDiagram: null,
@@ -103,18 +104,38 @@ function ResultsSkeleton() {
 
 export function ThreatVisorClient() {
   const [state, formAction] = useActionState(analyzeThreatsAction, initialState);
-  const [dslInput, setDslInput] = useState(TEMPLATES[0].content);
+  const [dslInput, setDslInput] = useState('');
+  const [mermaidInput, setMermaidInput] = useState('');
   const { pending } = useFormStatus();
 
   useEffect(() => {
     // Pre-load the first template on initial render
-    setDslInput(TEMPLATES[0].content);
+    const initialContent = TEMPLATES[0].content;
+    setDslInput(initialContent);
+    try {
+      setMermaidInput(generateMermaidDiagram(initialContent));
+    } catch(e) {
+      console.error("Failed to generate initial diagram", e);
+      setMermaidInput('');
+    }
   }, []);
+  
+  useEffect(() => {
+    if(state?.mermaidDiagram) {
+        setMermaidInput(state.mermaidDiagram);
+    }
+  }, [state?.mermaidDiagram]);
 
   const handleTemplateChange = (templateName: string) => {
     const template = TEMPLATES.find((t) => t.name === templateName);
     if (template) {
       setDslInput(template.content);
+      try {
+        setMermaidInput(generateMermaidDiagram(template.content));
+      } catch(e) {
+        console.error("Failed to generate diagram for template", e);
+        setMermaidInput('');
+      }
     }
   };
 
@@ -193,7 +214,7 @@ export function ThreatVisorClient() {
                   <AlertDescription>{state.error}</AlertDescription>
                 </Alert>
               </div>
-            ) : state?.threats ? (
+            ) : state?.threats || mermaidInput ? (
               <Tabs defaultValue="threats" className="flex flex-col h-full">
                 <div className="p-4 border-b">
                     <TabsList>
@@ -201,13 +222,29 @@ export function ThreatVisorClient() {
                         <TabsTrigger value="diagram">Diagram</TabsTrigger>
                     </TabsList>
                 </div>
-                <TabsContent value="threats" className="flex-1 overflow-auto">
-                  <ThreatsTable threats={state.threats.threats} />
+                <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
+                  {state.threats ? <ThreatsTable threats={state.threats.threats} /> : (
+                      <div className="flex h-full flex-col items-center justify-center text-center p-8">
+                           <p className="text-muted-foreground">Threat analysis not yet performed.</p>
+                      </div>
+                  )}
                 </TabsContent>
-                <TabsContent value="diagram" className="flex-1 overflow-auto">
-                    {state.mermaidDiagram ? (
-                        <MermaidDiagram chart={state.mermaidDiagram} />
-                    ) : <p className="text-muted-foreground p-4">Could not generate diagram.</p>}
+                <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0">
+                    <ResizablePanelGroup direction="vertical" className="h-full">
+                      <ResizablePanel defaultSize={40} minSize={20}>
+                        <div className="p-2 h-full">
+                           <Textarea
+                              value={mermaidInput}
+                              onChange={(e) => setMermaidInput(e.target.value)}
+                              className="h-full w-full resize-none font-mono text-sm border-0 focus-visible:ring-0"
+                              placeholder="Mermaid diagram code..."/>
+                        </div>
+                      </ResizablePanel>
+                      <ResizableHandle withHandle />
+                      <ResizablePanel defaultSize={60} minSize={20}>
+                        <MermaidDiagram chart={mermaidInput} />
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
                 </TabsContent>
               </Tabs>
             ) : (

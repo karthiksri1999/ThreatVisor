@@ -2,43 +2,50 @@
 
 import { useEffect, useId, useState } from 'react';
 import mermaid from 'mermaid';
+import { useTheme } from 'next-themes';
 
 type MermaidDiagramProps = {
   chart: string;
 };
 
-// Initialize Mermaid on mount
-if (typeof window !== 'undefined') {
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: 'dark',
-    securityLevel: 'loose',
-    themeVariables: {
-        darkMode: true,
-        background: 'transparent',
-    }
-  });
-}
-
 export function MermaidDiagram({ chart }: MermaidDiagramProps) {
   const id = useId();
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     let isMounted = true;
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: resolvedTheme === 'dark' ? 'dark' : 'default',
+      securityLevel: 'loose',
+      themeVariables: {
+        background: 'transparent',
+      },
+    });
+
     const renderDiagram = async () => {
       try {
         if (chart) {
-            const { svg: renderedSvg } = await mermaid.render(`mermaid-${id}`, chart);
+          const { svg: renderedSvg } = await mermaid.render(
+            `mermaid-${id}`,
+            chart
+          );
+          if (isMounted) {
+            setSvg(renderedSvg);
+            setError(null);
+          }
+        } else {
             if(isMounted) {
-                setSvg(renderedSvg);
+                setSvg('');
                 setError(null);
             }
         }
       } catch (e: any) {
-        if(isMounted) {
-            setError(e.message || 'Error rendering diagram.');
+        if (isMounted) {
+          setError(e.message || 'Error rendering diagram.');
         }
       }
     };
@@ -46,13 +53,13 @@ export function MermaidDiagram({ chart }: MermaidDiagramProps) {
     renderDiagram();
 
     return () => {
-        isMounted = false;
+      isMounted = false;
     };
-  }, [chart, id]);
+  }, [chart, id, resolvedTheme]);
 
   if (error) {
     return (
-      <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md">
+      <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-md h-full">
         <h3 className="font-semibold">Diagram Error</h3>
         <pre className="text-sm whitespace-pre-wrap font-code">{error}</pre>
       </div>
@@ -62,7 +69,7 @@ export function MermaidDiagram({ chart }: MermaidDiagramProps) {
   return (
     <div className="w-full h-full flex items-center justify-center p-4">
       {svg ? (
-        <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: svg }} />
+        <div className="w-full h-full [&>svg]:w-full [&>svg]:h-full" dangerouslySetInnerHTML={{ __html: svg }} />
       ) : (
         <p className="text-muted-foreground">Generating diagram...</p>
       )}
