@@ -17,6 +17,7 @@ import ReactFlow, {
   Handle,
   Position,
   useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { cn } from '@/lib/utils';
