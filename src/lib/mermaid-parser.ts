@@ -95,8 +95,9 @@ export function generateMermaidDiagram(dsl: string): string {
 
   if (boundaryIds.length > 0) {
     mermaidString += '\n    %% Trust Boundary Styling\n';
-    mermaidString += `    classDef boundary fill:rgba(128,128,128,0.1),stroke:#999,stroke-width:2px,stroke-dasharray:5,5\n`;
-    mermaidString += `    class ${boundaryIds.join(',')} boundary\n`;
+    for (const boundaryId of boundaryIds) {
+      mermaidString += `    style ${boundaryId} fill:rgba(128,128,128,0.1),stroke:#999,stroke-width:2px,stroke-dasharray:5 5\n`;
+    }
   }
 
   return mermaidString;
