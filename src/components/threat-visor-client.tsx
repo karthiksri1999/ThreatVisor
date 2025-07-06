@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TEMPLATES } from '@/lib/templates';
-import { AlertCircle, Download, FileCode, Link as LinkIcon, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
+import { AlertCircle, Download, FileCode, Link as LinkIcon, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown, Plus, Minus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StaticDiagram } from './static-diagram';
@@ -249,6 +249,11 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
         const initialContent = TEMPLATES[0].content;
         setDslInput(initialContent);
     }, []);
+    
+    // Reset node selection if the underlying data changes
+    useEffect(() => {
+        setSelectedNodeId(null);
+    }, [state.analyzedDsl]);
 
     const handleTemplateChange = (templateName: string) => {
         const template = TEMPLATES.find((t) => t.name === templateName);
@@ -393,7 +398,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                     <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
                         <ThreatsTable threats={state.threats.threats} components={analysisComponents} />
                     </TabsContent>
-                    <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0 p-0">
+                    <TabsContent value="diagram" className="flex-1 overflow-hidden data-[state=inactive]:hidden m-0 p-0">
                         <ResizablePanelGroup direction="vertical">
                             <ResizablePanel defaultSize={70}>
                                 <StaticDiagram 
@@ -403,7 +408,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                                 />
                             </ResizablePanel>
                             <ResizableHandle withHandle />
-                            <ResizablePanel defaultSize={30}>
+                            <ResizablePanel defaultSize={30} minSize={20}>
                                 <ThreatDetailsPanel 
                                     selectedNodeId={selectedNodeId}
                                     threats={state.threats.threats}
@@ -442,4 +447,3 @@ export function ThreatVisorClient() {
     </form>
   );
 }
-
