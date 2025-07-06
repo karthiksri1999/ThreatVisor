@@ -181,154 +181,172 @@ function ResultsSkeleton() {
     )
 }
 
+function ThreatVisorForm({ state }: { state: typeof initialState }) {
+    const [dslInput, setDslInput] = useState('');
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const { pending } = useFormStatus();
+
+    useEffect(() => {
+        const initialContent = TEMPLATES[0].content;
+        setDslInput(initialContent);
+    }, []);
+
+    const handleTemplateChange = (templateName: string) => {
+        const template = TEMPLATES.find((t) => t.name === templateName);
+        if (template) {
+            setDslInput(template.content);
+            setSelectedNodeId(null);
+        }
+    };
+
+    const handleDslChange = useCallback((newDsl: string) => {
+        setDslInput(newDsl);
+    }, []);
+
+    const components = useMemo(() => {
+        try {
+            return parseDsl(dslInput).components;
+        } catch (e) {
+            return [];
+        }
+    }, [dslInput]);
+    
+    const isConfigLocked = pending || !!state.threats || !!state.error;
+
+    return (
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={40} minSize={25}>
+                <div className="flex flex-col h-full p-4 gap-4">
+                    <h2 className="text-lg font-semibold tracking-tight">Configuration</h2>
+                    <div className="grid gap-2">
+                        <label className="text-sm font-medium">Templates</label>
+                        <Select onValueChange={handleTemplateChange} defaultValue={TEMPLATES[0].name} disabled={isConfigLocked}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Load a template..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {TEMPLATES.map((template) => (
+                                <SelectItem key={template.name} value={template.name}>
+                                    {template.name}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2 flex-1">
+                        <label htmlFor="dsl-input" className="text-sm font-medium">
+                            Architecture Definition (YAML)
+                        </label>
+                        <Textarea
+                            id="dsl-input"
+                            name="dsl"
+                            placeholder="Describe your architecture here..."
+                            className="flex-1 font-code text-sm resize-none bg-muted/50"
+                            value={dslInput}
+                            onChange={(e) => setDslInput(e.target.value)}
+                            required
+                            disabled={isConfigLocked}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <label htmlFor="methodology-select" className="text-sm font-medium">
+                            Threat Modeling Methodology
+                        </label>
+                        <Select name="methodology" defaultValue="STRIDE" required disabled={isConfigLocked}>
+                            <SelectTrigger id="methodology-select">
+                                <SelectValue placeholder="Select methodology" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="STRIDE">STRIDE</SelectItem>
+                                <SelectItem value="LINDDUN">LINDDUN</SelectItem>
+                                <SelectItem value="PASTA">PASTA</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    
+                    {isConfigLocked && !pending ? (
+                        <Button type="button" onClick={() => window.location.reload()} className="w-full">
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            Start New Analysis
+                        </Button>
+                    ) : (
+                        <SubmitButton />
+                    )}
+
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" className="w-full" disabled><Download className="mr-2 h-4 w-4"/> PDF</Button>
+                        <Button variant="outline" className="w-full" disabled><FileCode className="mr-2 h-4 w-4"/> Markdown</Button>
+                    </div>
+                </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={60} minSize={30}>
+            <div className="flex flex-col h-full">
+                {pending ? (
+                    <div className="flex flex-col h-full items-center justify-center p-8">
+                    <Wand2 className="h-12 w-12 text-primary animate-pulse" />
+                    <p className="mt-4 text-lg font-medium">Analyzing your architecture...</p>
+                    <p className="text-muted-foreground">The AI is identifying potential threats. This may take a moment.</p>
+                    <ResultsSkeleton />
+                    </div>
+                ) : state?.error ? (
+                <div className="flex h-full items-center justify-center p-8">
+                    <Alert variant="destructive" className="max-w-lg">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Analysis Failed</AlertTitle>
+                    <AlertDescription>{state.error}</AlertDescription>
+                    </Alert>
+                </div>
+                ) : (
+                <Tabs defaultValue="threats" className="flex flex-col h-full">
+                    <div className="p-4 border-b">
+                        <TabsList>
+                            <TabsTrigger value="threats">Threats</TabsTrigger>
+                            <TabsTrigger value="diagram">Diagram</TabsTrigger>
+                        </TabsList>
+                    </div>
+                    <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
+                    {state.threats ? <ThreatsTable threats={state.threats.threats} components={components} /> : (
+                        <div className="flex h-full flex-col items-center justify-center text-center p-8">
+                            <ShieldCheck className="h-12 w-12 text-primary/50 mb-4" />
+                            <p className="text-muted-foreground">Run an analysis to see the list of threats.</p>
+                        </div>
+                    )}
+                    </TabsContent>
+                    <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0 p-0">
+                        <ResizablePanelGroup direction="vertical">
+                            <ResizablePanel defaultSize={70}>
+                                <InteractiveDiagram 
+                                    dsl={dslInput} 
+                                    onDslChange={handleDslChange}
+                                    selectedNodeId={selectedNodeId}
+                                    onNodeSelect={setSelectedNodeId}
+                                />
+                            </ResizablePanel>
+                            <ResizableHandle withHandle />
+                            <ResizablePanel defaultSize={30}>
+                                <ThreatDetailsPanel 
+                                    selectedNodeId={selectedNodeId}
+                                    threats={state.threats?.threats}
+                                    components={components}
+                                />
+                            </ResizablePanel>
+                        </ResizablePanelGroup>
+                    </TabsContent>
+                </Tabs>
+                )}
+            </div>
+            </ResizablePanel>
+        </ResizablePanelGroup>
+    )
+}
+
 export function ThreatVisorClient() {
   const [state, formAction] = useActionState(analyzeThreatsAction, initialState);
-  const [dslInput, setDslInput] = useState('');
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const { pending } = useFormStatus();
-
-  useEffect(() => {
-    const initialContent = TEMPLATES[0].content;
-    setDslInput(initialContent);
-  }, []);
-  
-  const handleTemplateChange = (templateName: string) => {
-    const template = TEMPLATES.find((t) => t.name === templateName);
-    if (template) {
-      setDslInput(template.content);
-      setSelectedNodeId(null);
-    }
-  };
-
-  const handleDslChange = useCallback((newDsl: string) => {
-    setDslInput(newDsl);
-  }, []);
-
-  const components = useMemo(() => {
-      try {
-          return parseDsl(dslInput).components;
-      } catch (e) {
-          return [];
-      }
-  }, [dslInput]);
-
 
   return (
     <form action={formAction} className="h-full">
-      <ResizablePanelGroup direction="horizontal" className="h-full">
-        <ResizablePanel defaultSize={40} minSize={25}>
-          <div className="flex flex-col h-full p-4 gap-4">
-            <h2 className="text-lg font-semibold tracking-tight">Configuration</h2>
-            <div className="grid gap-2">
-                <label className="text-sm font-medium">Templates</label>
-                <Select onValueChange={handleTemplateChange} defaultValue={TEMPLATES[0].name}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Load a template..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {TEMPLATES.map((template) => (
-                        <SelectItem key={template.name} value={template.name}>
-                            {template.name}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="grid gap-2 flex-1">
-                <label htmlFor="dsl-input" className="text-sm font-medium">
-                    Architecture Definition (YAML)
-                </label>
-                <Textarea
-                    id="dsl-input"
-                    name="dsl"
-                    placeholder="Describe your architecture here..."
-                    className="flex-1 font-code text-sm resize-none bg-muted/50"
-                    value={dslInput}
-                    onChange={(e) => setDslInput(e.target.value)}
-                    required
-                />
-            </div>
-            <div className="grid gap-2">
-                <label htmlFor="methodology-select" className="text-sm font-medium">
-                    Threat Modeling Methodology
-                </label>
-                <Select name="methodology" defaultValue="STRIDE" required>
-                    <SelectTrigger id="methodology-select">
-                        <SelectValue placeholder="Select methodology" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="STRIDE">STRIDE</SelectItem>
-                        <SelectItem value="LINDDUN">LINDDUN</SelectItem>
-                        <SelectItem value="PASTA">PASTA</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <SubmitButton />
-             <div className="flex items-center gap-2">
-                <Button variant="outline" className="w-full" disabled><Download className="mr-2 h-4 w-4"/> PDF</Button>
-                <Button variant="outline" className="w-full" disabled><FileCode className="mr-2 h-4 w-4"/> Markdown</Button>
-             </div>
-          </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={60} minSize={30}>
-          <div className="flex flex-col h-full">
-            {pending ? (
-                <div className="flex flex-col h-full items-center justify-center p-8">
-                   <Wand2 className="h-12 w-12 text-primary animate-pulse" />
-                   <p className="mt-4 text-lg font-medium">Analyzing your architecture...</p>
-                   <p className="text-muted-foreground">The AI is identifying potential threats. This may take a moment.</p>
-                   <ResultsSkeleton />
-                </div>
-            ) : state?.error ? (
-              <div className="flex h-full items-center justify-center p-8">
-                <Alert variant="destructive" className="max-w-lg">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Analysis Failed</AlertTitle>
-                  <AlertDescription>{state.error}</AlertDescription>
-                </Alert>
-              </div>
-            ) : (
-              <Tabs defaultValue="threats" className="flex flex-col h-full">
-                <div className="p-4 border-b">
-                    <TabsList>
-                        <TabsTrigger value="threats">Threats</TabsTrigger>
-                        <TabsTrigger value="diagram">Diagram</TabsTrigger>
-                    </TabsList>
-                </div>
-                <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
-                  {state.threats ? <ThreatsTable threats={state.threats.threats} components={components} /> : (
-                      <div className="flex h-full flex-col items-center justify-center text-center p-8">
-                           <ShieldCheck className="h-12 w-12 text-primary/50 mb-4" />
-                           <p className="text-muted-foreground">Run an analysis to see the list of threats.</p>
-                      </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0 p-0">
-                    <ResizablePanelGroup direction="vertical">
-                        <ResizablePanel defaultSize={70}>
-                            <InteractiveDiagram 
-                                dsl={dslInput} 
-                                onDslChange={handleDslChange}
-                                selectedNodeId={selectedNodeId}
-                                onNodeSelect={setSelectedNodeId}
-                            />
-                        </ResizablePanel>
-                        <ResizableHandle withHandle />
-                        <ResizablePanel defaultSize={30}>
-                            <ThreatDetailsPanel 
-                                selectedNodeId={selectedNodeId}
-                                threats={state.threats?.threats}
-                                components={components}
-                            />
-                        </ResizablePanel>
-                    </ResizablePanelGroup>
-                </TabsContent>
-              </Tabs>
-            )}
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+      <ThreatVisorForm state={state} />
     </form>
   );
 }
