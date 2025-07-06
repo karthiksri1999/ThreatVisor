@@ -154,7 +154,7 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   }
 
   return (
-    <div className="h-full w-full overflow-auto p-4 flex justify-center items-start bg-background relative">
+    <div className="h-full w-full bg-background relative">
         <style>
             {`
             .node.selected > rect, .node.selected > path, .node.selected > polygon {
@@ -171,17 +171,19 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
             }
             `}
         </style>
-      <div className="zoom-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
-        <div
-            ref={containerRef}
-            className="mermaid-container"
-        />
+       <div className="h-full w-full overflow-auto p-4 flex justify-start items-start">
+        <div className="zoom-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
+            <div
+                ref={containerRef}
+                className="mermaid-container"
+            />
+        </div>
       </div>
        <div className="absolute bottom-4 right-4 flex items-center gap-2">
             <Button type="button" variant="outline" size="icon" onClick={() => handleZoom('out')} aria-label="Zoom out">
                 <Minus className="h-4 w-4" />
             </Button>
-            <span className="text-sm text-muted-foreground w-12 text-center">
+            <span className="text-sm text-muted-foreground w-12 text-center bg-background/50 backdrop-blur-sm rounded">
                 {Math.round(zoom * 100)}%
             </span>
             <Button type="button" variant="outline" size="icon" onClick={() => handleZoom('in')} aria-label="Zoom in">
