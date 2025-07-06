@@ -28,20 +28,23 @@ export interface DslInput {
 export function parseDsl(dsl: string): DslInput {
   try {
     const parsed = yaml.load(dsl);
-    if (typeof parsed === 'object' && parsed !== null && 'components' in parsed && 'data_flows' in parsed) {
-      return parsed as DslInput;
+
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('Input is not a valid object.');
     }
-    throw new Error("Invalid DSL format: Missing 'components' or 'data_flows'.");
+
+    if (!('components' in parsed && 'data_flows' in parsed)) {
+      throw new Error(
+        "Invalid DSL format: The parsed content must be an object containing 'components' and 'data_flows' keys."
+      );
+    }
+
+    return parsed as DslInput;
   } catch (e: any) {
-    try {
-      const parsed = JSON.parse(dsl);
-      if (typeof parsed === 'object' && parsed !== null && 'components' in parsed && 'data_flows' in parsed) {
-        return parsed as DslInput;
-      }
-      throw new Error("Invalid DSL format: Missing 'components' or 'data_flows'.");
-    } catch (jsonError: any) {
-      throw new Error(`Failed to parse DSL as YAML or JSON.`);
-    }
+    // If yaml.load fails, it could be a syntax error in either YAML or JSON
+    throw new Error(
+      `Failed to parse architecture definition. Please ensure it is valid YAML or JSON. Parser error: ${e.message}`
+    );
   }
 }
 

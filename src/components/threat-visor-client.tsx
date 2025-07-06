@@ -237,7 +237,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     </div>
                     <div className="grid gap-2 flex-1">
                         <label htmlFor="dsl-input" className="text-sm font-medium">
-                            Architecture Definition (YAML)
+                            Architecture Definition (YAML or JSON)
                         </label>
                         <Textarea
                             id="dsl-input"
