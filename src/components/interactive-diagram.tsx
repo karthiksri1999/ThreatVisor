@@ -171,9 +171,16 @@ export function InteractiveDiagram({ dsl, onDslChange }: InteractiveDiagramProps
   const [dslError, setDslError] = useState<string | null>(null);
   const dslRef = useRef(dsl);
 
+  // Keep dslRef updated with the latest dsl prop on every render.
   useEffect(() => {
     dslRef.current = dsl;
-    // Basic check to prevent update loops if the flow state caused this change
+  });
+
+  // This effect syncs the diagram state FROM the dsl prop.
+  // It only runs when the `dsl` prop changes.
+  useEffect(() => {
+    // To prevent loops, we check if the new DSL is what our current flow state would produce.
+    // If it is, then the change likely originated from here, and we can ignore it.
     const currentFlowAsDsl = dumpDsl(flowToDsl(nodes, edges));
     if (currentFlowAsDsl === dsl) return;
 
@@ -186,7 +193,10 @@ export function InteractiveDiagram({ dsl, onDslChange }: InteractiveDiagramProps
     } catch (e: any) {
         setDslError(e.message);
     }
-  }, [dsl, nodes, edges]);
+    // We intentionally disable exhaustive-deps here to break the synchronization loop.
+    // We only want this effect to run when the `dsl` prop changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dsl]);
   
   const onNodesChange: OnNodesChange = useCallback((changes) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
@@ -200,20 +210,25 @@ export function InteractiveDiagram({ dsl, onDslChange }: InteractiveDiagramProps
     setEdges((eds) => addEdge({ ...connection, type: 'smoothstep', markerEnd: { type: 'arrowclosed' }, label: 'New flow' }, eds));
   }, []);
 
+  // This effect syncs the dsl prop FROM the diagram state.
   useEffect(() => {
-    if (nodes.length > 0 || edges.length > 0) {
-      const handler = setTimeout(() => {
-        const newDslObject = flowToDsl(nodes, edges);
-        const newDslString = dumpDsl(newDslObject);
-        if (newDslString !== dslRef.current) {
-          onDslChange(newDslString);
-        }
-      }, 500);
-
-      return () => {
-        clearTimeout(handler);
-      };
+    // Do not run on initial render when nodes are empty.
+    if (nodes.length === 0 && edges.length === 0) {
+      return;
     }
+
+    const handler = setTimeout(() => {
+      const newDslObject = flowToDsl(nodes, edges);
+      const newDslString = dumpDsl(newDslObject);
+      // Use the ref to compare against the latest dsl value.
+      if (newDslString !== dslRef.current) {
+        onDslChange(newDslString);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
   }, [nodes, edges, onDslChange]);
 
   if (dslError) {
