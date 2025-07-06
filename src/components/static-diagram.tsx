@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -153,7 +154,7 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   }
 
   return (
-    <div className="h-full w-full overflow-auto p-4 grid place-items-center bg-background relative">
+    <div className="h-full w-full overflow-auto p-4 flex justify-center items-start bg-background relative">
         <style>
             {`
             .node.selected > rect, .node.selected > path, .node.selected > polygon {
@@ -166,13 +167,14 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
             }
             .zoom-wrapper {
                 transition: transform 0.1s ease-in-out;
+                flex-shrink: 0;
             }
             `}
         </style>
-      <div className="zoom-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}>
+      <div className="zoom-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
         <div
             ref={containerRef}
-            className="mermaid-container text-center"
+            className="mermaid-container"
         />
       </div>
        <div className="absolute bottom-4 right-4 flex items-center gap-2">
