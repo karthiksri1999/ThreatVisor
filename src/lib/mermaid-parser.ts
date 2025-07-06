@@ -28,12 +28,16 @@ function getNodeDefinition(component: Component): string {
   const { id, name, type } = component;
   switch (type) {
     case 'actor':
+      // The :::actor class is applied here
       return `${id}("<span>&#128100;</span><br/>${name}"):::actor`;
     case 'service':
+      // The :::service class is applied here
       return `${id}["${name}"]:::service`;
     case 'datastore':
+      // The :::datastore class is applied here
       return `${id}[("${name}")]:::datastore`;
     default:
+      // For unknown types, no class is applied initially
       return `${id}("${name}")`;
   }
 }
@@ -58,11 +62,14 @@ export function generateMermaidDiagram(dsl: string): string {
   let mermaidString = 'graph TD\n';
 
   const componentsInBoundaries = new Set<string>();
-  const boundaryIds: string[] = [];
+
+  // Improved styling for cleaner diagrams, matching app theme
+  mermaidString += `    classDef actor fill:#3F51B5,stroke:#fff,stroke-width:2px,color:#fff;\n`;
+  mermaidString += `    classDef service fill:#212836,stroke:#009688,stroke-width:2px,color:#fff;\n`;
+  mermaidString += `    classDef datastore fill:#4a148c,stroke:#009688,stroke-width:2px,color:#fff;\n`;
 
   if (parsedDsl.trust_boundaries) {
     for (const boundary of parsedDsl.trust_boundaries) {
-      boundaryIds.push(boundary.id);
       mermaidString += `    subgraph ${boundary.id}["${boundary.label}"]\n`;
       mermaidString += `        direction TB\n`;
       for (const componentId of boundary.components) {
@@ -87,18 +94,9 @@ export function generateMermaidDiagram(dsl: string): string {
   for (const flow of parsedDsl.data_flows) {
     mermaidString += `    ${flow.from} --"${flow.label}"--> ${flow.to}\n`;
   }
-
-  mermaidString += '\n';
-  mermaidString += `    classDef actor fill:#4f4f4f,stroke:#ccc,stroke-width:2px,color:#fff;\n`;
-  mermaidString += `    classDef service fill:#2d3b55,stroke:#b4b4b4,stroke-width:1px,color:#fff;\n`;
-  mermaidString += `    classDef datastore fill:#4f3a55,stroke:#b4b4b4,stroke-width:1px,color:#fff;\n`;
-
-  if (boundaryIds.length > 0) {
-    mermaidString += '\n    %% Trust Boundary Styling\n';
-    for (const boundaryId of boundaryIds) {
-      mermaidString += `    style ${boundaryId} fill:rgba(128,128,128,0.1),stroke:#999,stroke-width:2px,stroke-dasharray:5 5\n`;
-    }
-  }
+  
+  // The invalid styling block for trust boundaries has been removed to fix the parsing error.
+  // Subgraphs will now use the default theme styling, which is more robust and ensures visibility.
 
   return mermaidString;
 }
