@@ -234,9 +234,10 @@ function ResultsSkeleton() {
     )
 }
 
-function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isPending: boolean }) {
+function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialState; isPending: boolean; onReset: () => void; }) {
     const [dslInput, setDslInput] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [analysisResult, setAnalysisResult] = useState<{threats: ThreatSuggestionsOutput | null, components: Component[] | null, analyzedDsl: string | null} | null>(null);
 
     const isMobile = useIsMobile();
     const [isClient, setIsClient] = useState(false);
@@ -250,6 +251,16 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
         setDslInput(initialContent);
     }, []);
 
+    useEffect(() => {
+        if (state.threats) {
+            setAnalysisResult({
+                threats: state.threats,
+                components: state.components,
+                analyzedDsl: state.analyzedDsl,
+            })
+        }
+    }, [state.threats, state.components, state.analyzedDsl]);
+
     const handleTemplateChange = (templateName: string) => {
         const template = TEMPLATES.find((t) => t.name === templateName);
         if (template) {
@@ -258,20 +269,20 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
         }
     };
 
-    const analysisComponents = state.components || [];
-    const dslForDiagram = state.analyzedDsl || dslInput;
+    const analysisComponents = analysisResult?.components || [];
+    const dslForDiagram = analysisResult?.analyzedDsl || dslInput;
     
-    const isConfigLocked = isPending || !!state.threats || !!state.error;
+    const isConfigLocked = isPending || !!analysisResult;
 
     const handlePdfExport = () => {
-        if (state.threats && state.components && state.analyzedDsl) {
-            generatePdfReport(state.threats, state.components, state.analyzedDsl);
+        if (analysisResult?.threats && analysisResult?.components && analysisResult?.analyzedDsl) {
+            generatePdfReport(analysisResult.threats, analysisResult.components, analysisResult.analyzedDsl);
         }
     };
 
     const handleMarkdownExport = () => {
-        if (state.threats && state.components && state.analyzedDsl) {
-            const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl);
+        if (analysisResult?.threats && analysisResult?.components && analysisResult?.analyzedDsl) {
+            const markdownContent = generateMarkdownReport(analysisResult.threats, analysisResult.components, analysisResult.analyzedDsl);
             const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -318,7 +329,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                             id="dsl-input"
                             name="dsl"
                             placeholder="Describe your architecture here..."
-                            className="font-code text-sm resize-none bg-muted/50 h-full"
+                            className="font-code text-sm resize-none bg-muted/50 flex-1"
                             value={dslInput}
                             onChange={(e) => setDslInput(e.target.value)}
                             required
@@ -346,7 +357,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     </div>
                     
                     {isConfigLocked && !isPending ? (
-                        <Button type="button" onClick={() => window.location.reload()} className="w-full">
+                        <Button type="button" onClick={onReset} className="w-full">
                             <Wand2 className="mr-2 h-4 w-4" />
                             Start New Analysis
                         </Button>
@@ -355,10 +366,10 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     )}
 
                     <div className="flex items-center gap-2">
-                        <Button type="button" variant="outline" className="w-full" onClick={handlePdfExport} disabled={!state.threats}>
+                        <Button type="button" variant="outline" className="w-full" onClick={handlePdfExport} disabled={!analysisResult?.threats}>
                             <Download className="mr-2 h-4 w-4"/> PDF
                         </Button>
-                        <Button type="button" variant="outline" className="w-full" onClick={handleMarkdownExport} disabled={!state.threats}>
+                        <Button type="button" variant="outline" className="w-full" onClick={handleMarkdownExport} disabled={!analysisResult?.threats}>
                             <FileCode className="mr-2 h-4 w-4"/> Markdown
                         </Button>
                     </div>
@@ -382,7 +393,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                     <AlertDescription>{state.error}</AlertDescription>
                     </Alert>
                 </div>
-                ) : state.threats ? (
+                ) : analysisResult ? (
                 <Tabs defaultValue="threats" className="flex flex-col h-full">
                     <div className="p-4 border-b">
                         <TabsList>
@@ -391,7 +402,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                         </TabsList>
                     </div>
                     <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
-                        <ThreatsTable threats={state.threats.threats} components={analysisComponents} />
+                        <ThreatsTable threats={analysisResult.threats!.threats} components={analysisComponents} />
                     </TabsContent>
                     <TabsContent value="diagram" className="flex-1 overflow-auto data-[state=inactive]:hidden m-0 p-0">
                         <ResizablePanelGroup direction="vertical">
@@ -406,7 +417,7 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
                             <ResizablePanel defaultSize={30}>
                                 <ThreatDetailsPanel 
                                     selectedNodeId={selectedNodeId}
-                                    threats={state.threats?.threats}
+                                    threats={analysisResult.threats?.threats}
                                     components={analysisComponents}
                                 />
                             </ResizablePanel>
@@ -430,10 +441,15 @@ function ThreatVisorForm({ state, isPending }: { state: typeof initialState; isP
 
 export function ThreatVisorClient() {
   const [state, formAction, isPending] = useActionState(analyzeThreatsAction, initialState);
+  const [formKey, setFormKey] = useState(0);
+
+  const handleReset = () => {
+    setFormKey(prev => prev + 1);
+  }
 
   return (
-    <form action={formAction} className="h-full">
-      <ThreatVisorForm state={state} isPending={isPending} />
+    <form action={formAction} className="h-full" key={formKey}>
+      <ThreatVisorForm state={state} isPending={isPending} onReset={handleReset} />
     </form>
   );
 }
