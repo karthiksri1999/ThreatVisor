@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TEMPLATES } from '@/lib/templates';
-import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User } from 'lucide-react';
+import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InteractiveDiagram } from './interactive-diagram';
@@ -55,6 +55,8 @@ function SubmitButton({ pending }: { pending: boolean }) {
 }
 
 function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutput['threats'], components: Component[] }) {
+    const [sortOrder, setSortOrder] = useState<'desc' | 'asc' | 'none'>('desc');
+
     const getSeverityVariant = (severity: 'High' | 'Medium' | 'Low') => {
         switch (severity) {
             case 'High': return 'destructive';
@@ -64,12 +66,38 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
         }
     }
     const componentMap = useMemo(() => new Map(components.map(c => [c.id, c.name])), [components]);
+    
+    const toggleSortOrder = () => {
+        if (sortOrder === 'desc') setSortOrder('asc');
+        else if (sortOrder === 'asc') setSortOrder('none');
+        else setSortOrder('desc');
+    };
+
+    const sortedThreats = useMemo(() => {
+        const severityValues: { [key in 'High' | 'Medium' | 'Low']: number } = { High: 3, Medium: 2, Low: 1 };
+        if (sortOrder === 'none') {
+            return threats;
+        }
+        return [...threats].sort((a, b) => {
+            const valA = severityValues[a.severity];
+            const valB = severityValues[b.severity];
+            return sortOrder === 'desc' ? valB - valA : valA - valB;
+        });
+    }, [threats, sortOrder]);
+
+
   return (
      <div className="relative h-full overflow-auto">
       <Table>
         <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-sm">
           <TableRow>
-            <TableHead className="w-[10%]">Severity</TableHead>
+            <TableHead className="w-[10%]">
+                 <Button variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4">
+                    Severity
+                    {sortOrder === 'desc' && <ArrowDown className="ml-2 h-4 w-4" />}
+                    {sortOrder === 'asc' && <ArrowUp className="ml-2 h-4 w-4" />}
+                </Button>
+            </TableHead>
             <TableHead className="w-[15%]">Affected Component</TableHead>
             <TableHead className="w-[30%]">Threat</TableHead>
             <TableHead className="w-[35%]">Mitigation</TableHead>
@@ -77,7 +105,7 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
           </TableRow>
         </TableHeader>
         <TableBody>
-          {threats.map((threat, index) => (
+          {sortedThreats.map((threat, index) => (
             <TableRow key={index}>
               <TableCell><Badge variant={getSeverityVariant(threat.severity)}>{threat.severity}</Badge></TableCell>
               <TableCell className="font-medium">{componentMap.get(threat.affectedComponentId) || threat.affectedComponentId}</TableCell>

@@ -32,7 +32,7 @@ const ThreatSuggestionsOutputSchema = z.object({
       affectedComponentId: z.string().describe('The ID of the component affected by the threat.'),
       severity: z.enum(['High', 'Medium', 'Low']).describe('The severity level of the threat.'),
       mitigation: z.string().describe('Suggested mitigation strategies for the threat.'),
-      cvss: z.number().optional().describe('The CVSS 3.1 score of the threat, if available.'),
+      cvss: z.number().describe('The CVSS 3.1 score of the threat.'),
       cve: z.string().optional().describe('The CVE identifier, if applicable (e.g., CVE-2021-44228).'),
       cwe: z.string().optional().describe('The CWE identifier, if applicable (e.g., CWE-79).'),
     })
@@ -81,7 +81,7 @@ You will be given an architecture description in a structured format, and a spec
     *   **Severity:** Assign a severity level (\`High\`, \`Medium\`, \`Low\`) based on potential impact.
     *   **Mitigation:** Provide a concrete, actionable mitigation strategy. Example: "Implement network policies (e.g., security groups) to ensure the Product Microservice only accepts traffic from the API Gateway. Implement mutual TLS (mTLS) for service-to-service authentication."
     *   **Vulnerability Identifiers (CRITICAL):** Where applicable, provide standard identifiers.
-        *   **CVSS:** Estimate a CVSS 3.1 base score.
+        *   **CVSS (MANDATORY):** You MUST provide an estimated CVSS 3.1 base score for every single threat, ranging from 0.0 to 10.0. This field is required.
         *   **CWE:** Identify the relevant Common Weakness Enumeration (CWE) ID (e.g., CWE-89 for SQL Injection).
         *   **CVE:** If the threat relates to a known vulnerability in a technology type described (e.g., a specific version of a library, if mentioned), provide the CVE identifier. If not, omit this field.
 
