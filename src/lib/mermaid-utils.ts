@@ -1,13 +1,8 @@
 import mermaid from 'mermaid';
 import type { DslInput } from '@/lib/dsl-parser';
 
-export function initializeMermaid(theme: 'dark' | 'light' | 'default') {
-    const mermaidTheme = theme === 'dark' ? 'dark' : 'default';
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: mermaidTheme,
-      fontFamily: 'Inter, sans-serif',
-      themeVariables: {
+export function getMermaidThemeVariables(theme: 'dark' | 'light' | 'default') {
+    return {
         background: theme === 'dark' ? '#212836' : '#FFFFFF',
         primaryColor: theme === 'dark' ? '#2a3344' : '#f5f7f7',
         primaryTextColor: theme === 'dark' ? '#e5e7eb' : '#111827',
@@ -17,7 +12,16 @@ export function initializeMermaid(theme: 'dark' | 'light' | 'default') {
         clusterTitleColor: theme === 'dark' ? '#e5e7eb' : '#111827',
         clusterBorder: '#009688',
         secondaryColor: '#009688',
-      },
+    };
+}
+
+export function initializeMermaid(theme: 'dark' | 'light' | 'default') {
+    const mermaidTheme = theme === 'dark' ? 'dark' : 'default';
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: mermaidTheme,
+      fontFamily: 'Inter, sans-serif',
+      themeVariables: getMermaidThemeVariables(theme),
       securityLevel: 'loose'
     });
 }

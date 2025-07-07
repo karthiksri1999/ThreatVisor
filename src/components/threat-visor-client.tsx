@@ -32,7 +32,7 @@ import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import mermaid from 'mermaid';
-import { dslToMermaid, initializeMermaid } from '@/lib/mermaid-utils';
+import { dslToMermaid, initializeMermaid, getMermaidThemeVariables } from '@/lib/mermaid-utils';
 
 
 const initialState = {
@@ -84,7 +84,7 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
         return [...threats].sort((a, b) => {
             const valA = severityValues[a.severity];
             const valB = severityValues[b.severity];
-            return sortOrder === 'desc' ? valB - valA : valA - valB;
+            return sortOrder === 'desc' ? valB - valA : valA - bVal;
         });
     }, [threats, sortOrder]);
 
@@ -261,23 +261,28 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
         if (!state.analyzedDsl) return '<!-- No DSL to render -->';
     
         try {
-            // Must be initialized before every render call for exports to work reliably
-            initializeMermaid(resolvedTheme as any);
-            const parsedDsl = parseDsl(state.analyzedDsl);
-            // Render without interactive elements or icons for a cleaner export that avoids font issues
-            const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false, includeIcons: false });
-            // Use a unique ID for each render to avoid mermaid cache issues
-            const { svg } = await mermaid.render(`export-${Date.now()}`, mermaidGraph);
-            
-            // POST-PROCESSING: To prevent canvas-tainting errors during PDF generation,
-            // remove references to external fonts ('Inter') and replace them with a generic
-            // browser-safe font. This ensures the SVG is self-contained.
-            const cleanedSvg = svg.replace(/font-family: "Inter", sans-serif;/g, 'font-family: sans-serif;');
+            // Temporarily re-initialize Mermaid with export-safe settings
+            const mermaidTheme = resolvedTheme === 'dark' ? 'dark' : 'default';
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: mermaidTheme,
+              fontFamily: 'sans-serif', // Use a web-safe font to prevent canvas tainting
+              securityLevel: 'loose',
+              themeVariables: getMermaidThemeVariables(resolvedTheme as any),
+            });
 
-            return cleanedSvg;
+            const parsedDsl = parseDsl(state.analyzedDsl);
+            // Render without interactive elements or icons
+            const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false, includeIcons: false });
+            
+            const { svg } = await mermaid.render(`export-${Date.now()}`, mermaidGraph);
+            return svg;
         } catch (e) {
             console.error("Failed to render diagram for export:", e);
             return '<!-- Diagram could not be generated -->';
+        } finally {
+            // ALWAYS restore the original Mermaid configuration for the live diagram
+            initializeMermaid(resolvedTheme as any);
         }
     }
 
