@@ -96,16 +96,23 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
       startOnLoad: false,
       theme: mermaidTheme,
       fontFamily: 'Inter, sans-serif',
-      flowchart: {
-          useMaxWidth: true,
-      },
       themeVariables: {
         background: resolvedTheme === 'dark' ? '#212836' : '#FFFFFF',
-        primaryColor: resolvedTheme === 'dark' ? '#374151' : '#E5E7EB',
-        primaryTextColor: resolvedTheme === 'dark' ? '#F9FAFB' : '#111827',
+        
+        // Node styles
+        primaryColor: resolvedTheme === 'dark' ? '#2a3344' : '#f5f7f7',
+        primaryTextColor: resolvedTheme === 'dark' ? '#e5e7eb' : '#111827',
         primaryBorderColor: '#3F51B5',
+
+        // Edge styles
         lineColor: resolvedTheme === 'dark' ? '#4B5563' : '#9CA3AF',
-        secondaryColor: '#10B981',
+        
+        // Cluster (subgraph/trust boundary) styles
+        clusterBkg: resolvedTheme === 'dark' ? '#2a3344' : '#f5f7f7',
+        clusterTitleColor: resolvedTheme === 'dark' ? '#e5e7eb' : '#111827',
+        clusterBorder: '#009688', // Use accent color for the border
+
+        secondaryColor: '#009688',
       },
       securityLevel: 'loose'
     });
