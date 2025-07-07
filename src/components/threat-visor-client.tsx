@@ -29,7 +29,6 @@ import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Component } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const initialState = {
@@ -238,13 +237,6 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     const [dslInput, setDslInput] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-    const isMobile = useIsMobile();
-    const [isClient, setIsClient] = useState(false);
-    
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-
     useEffect(() => {
         const initialContent = TEMPLATES[0].content;
         setDslInput(initialContent);
@@ -287,16 +279,8 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
         }
     };
     
-    if (!isClient) {
-        return (
-             <div className="flex h-full items-center justify-center">
-                <ResultsSkeleton />
-            </div>
-        )
-    }
-
     return (
-        <ResizablePanelGroup direction={isMobile ? 'vertical' : 'horizontal'} className="h-full">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={40} minSize={25}>
                 <div className="flex flex-col h-full p-4 gap-4">
                     <h2 className="text-lg font-semibold tracking-tight">Configuration</h2>
@@ -440,9 +424,10 @@ export function ThreatVisorClient() {
   const handleReset = () => {
     setFormKey(prev => prev + 1);
   }
-
+  
+  // The header is h-16 which is 4rem. 100vh - 4rem gives the remaining height for the main content.
   return (
-    <form action={formAction} className="h-full" key={formKey}>
+    <form action={formAction} className="h-[calc(100vh-4rem)]" key={formKey}>
       <ThreatVisorForm state={state} isPending={isPending} onReset={handleReset} />
     </form>
   );
