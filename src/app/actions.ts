@@ -50,9 +50,18 @@ export async function analyzeThreatsAction(
 
     return { threats, error: null, components: parsedDsl.components, analyzedDsl: dsl, analyzedMethodology: methodology };
   } catch (e: any) {
+    console.error("An error occurred during threat analysis:", e);
+    let errorMessage = "An unexpected error occurred during analysis.";
+
+    if (e && typeof e.message === 'string') {
+      errorMessage = e.message;
+    } else if (typeof e === 'string') {
+      errorMessage = e;
+    }
+    
     return {
       threats: null,
-      error: e.message || 'An unexpected error occurred.',
+      error: errorMessage,
       components: null,
       analyzedDsl: dsl,
       analyzedMethodology: methodology,
