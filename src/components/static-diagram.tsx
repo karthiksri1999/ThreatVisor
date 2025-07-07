@@ -178,7 +178,7 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
             }
             `}
         </style>
-       <div className="h-full w-full overflow-auto p-4 flex justify-start items-start">
+       <div className="h-full w-full overflow-auto p-4 flex justify-center items-start">
         <div className="zoom-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
             <div
                 ref={containerRef}
