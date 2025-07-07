@@ -1,3 +1,4 @@
+
 import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import type { Component } from './dsl-parser';
 import jsPDF from 'jspdf';
@@ -7,13 +8,19 @@ import autoTable from 'jspdf-autotable';
 export function generateMarkdownReport(
   threatData: ThreatSuggestionsOutput,
   components: Component[],
-  dsl: string
+  dsl: string,
+  diagramSvg: string
 ): string {
   const componentMap = new Map(components.map((c) => [c.id, c.name]));
   let markdown = `# Threat Model Report\n\n`;
 
   markdown += `## Architecture Definition\n\n`;
   markdown += `\`\`\`yaml\n${dsl}\n\`\`\`\n\n`;
+
+  if (diagramSvg) {
+    markdown += `## Diagram\n\n`;
+    markdown += `${diagramSvg}\n\n`;
+  }
 
   markdown += `## Identified Threats\n\n`;
   markdown += `| Severity | Affected Component | Threat Description | Mitigation | CVSS | CVE | CWE |\n`;
@@ -25,37 +32,62 @@ export function generateMarkdownReport(
     const cleanThreat = threat.threat.replace(/\|/g, '\\|').replace(/\n/g, '<br />');
     const cleanMitigation = threat.mitigation.replace(/\|/g, '\\|').replace(/\n/g, '<br />');
     
-    markdown += `| ${threat.severity} | ${componentName} | ${cleanThreat} | ${cleanMitigation} | ${threat.cvss || 'N/A'} | ${threat.cve || 'N/A'} | ${threat.cwe || 'N/A'} |\n`;
+    markdown += `| ${threat.severity} | ${componentName} | ${cleanThreat} | ${cleanMitigation} | ${threat.cvss || 'N/A'} | ${threat.cwe || 'N/A'} | ${threat.cve || 'N/A'} |\n`;
   });
 
   return markdown;
 }
 
 
-export function generatePdfReport(
+export async function generatePdfReport(
   threatData: ThreatSuggestionsOutput,
   components: Component[],
-  dsl: string
+  dsl: string,
+  diagramSvg: string
 ) {
-  const doc = new jsPDF();
+  const doc = new jsPDF({ orientation: 'l', unit: 'px', format: 'a4' });
   const componentMap = new Map(components.map((c) => [c.id, c.name]));
 
+  const margin = 40;
+  const docWidth = doc.internal.pageSize.getWidth();
+  const contentWidth = docWidth - margin * 2;
+  
   // Title
-  doc.setFontSize(18);
-  doc.text('Threat Model Report', 14, 22);
+  doc.setFontSize(24);
+  doc.text('Threat Model Report', margin, margin + 10);
+
+  let currentY = margin + 40;
 
   // Architecture Definition
-  doc.setFontSize(12);
-  doc.text('Architecture Definition', 14, 32);
-  doc.setFontSize(8);
+  doc.setFontSize(16);
+  doc.text('Architecture Definition', margin, currentY);
+  currentY += 20;
+  doc.setFontSize(9);
   doc.setFont('courier');
   
-  const dslLines = doc.splitTextToSize(dsl, 180);
-  doc.text(dslLines, 14, 40);
-  const dslHeight = dslLines.length * 3.5; // Estimate height of the DSL block
+  const dslLines = doc.splitTextToSize(dsl, contentWidth);
+  doc.text(dslLines, margin, currentY);
+  currentY += dslLines.length * 9 + 20;
+
+  // Diagram
+  if (diagramSvg) {
+    if (currentY > doc.internal.pageSize.getHeight() - 200) { // Check if there's enough space for diagram
+        doc.addPage();
+        currentY = margin;
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(16);
+    doc.text('Diagram', margin, currentY);
+    currentY += 20;
+    
+    // jsPDF's addImage supports SVG content directly
+    doc.addImage(diagramSvg, 'SVG', margin, currentY, contentWidth, contentWidth / 2);
+    currentY += (contentWidth / 2) + 20;
+  }
   
+  // Threats Table
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
 
   const tableBody = threatData.threats.map(threat => ([
     threat.severity,
@@ -68,15 +100,18 @@ export function generatePdfReport(
   ]));
 
   autoTable(doc, {
-    startY: 40 + dslHeight,
+    startY: currentY,
     head: [['Severity', 'Component', 'Threat', 'Mitigation', 'CVSS', 'CVE', 'CWE']],
     body: tableBody,
     theme: 'striped',
     headStyles: { fillColor: [63, 81, 181] }, // Primary color: #3F51B5
-    didDrawPage: (data) => {
-        // Reset header on new pages
-        doc.setFontSize(18);
-        doc.text('Threat Model Report', 14, 22);
+    styles: {
+      cellPadding: 3,
+      fontSize: 8,
+    },
+    columnStyles: {
+      2: { cellWidth: 'auto' }, // Threat
+      3: { cellWidth: 'auto' }, // Mitigation
     }
   });
 

@@ -260,15 +260,19 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     const dslForDiagram = state.analyzedDsl || dslInput;
     const isConfigLocked = isPending || analysisHasRun;
 
-    const handlePdfExport = () => {
+    const handlePdfExport = async () => {
         if (state.threats && state.components && state.analyzedDsl) {
-            generatePdfReport(state.threats, state.components, state.analyzedDsl);
+            const svgEl = document.querySelector('.mermaid-container > svg');
+            const diagramSvg = svgEl ? svgEl.outerHTML : '';
+            await generatePdfReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
         }
     };
 
     const handleMarkdownExport = () => {
         if (state.threats && state.components && state.analyzedDsl) {
-            const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl);
+            const svgEl = document.querySelector('.mermaid-container > svg');
+            const diagramSvg = svgEl ? svgEl.outerHTML : '<!-- Diagram could not be generated -->';
+            const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
             const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
