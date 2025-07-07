@@ -272,8 +272,8 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
             });
 
             const parsedDsl = parseDsl(state.analyzedDsl);
-            // Render without interactive elements or icons
-            const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false, includeIcons: false });
+            // Render without interactive elements, icons, or HTML labels to prevent canvas tainting
+            const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false, includeIcons: false, useHtmlLabels: false });
             
             const { svg } = await mermaid.render(`export-${Date.now()}`, mermaidGraph);
             return svg;

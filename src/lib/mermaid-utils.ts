@@ -29,10 +29,11 @@ export function initializeMermaid(theme: 'dark' | 'light' | 'default') {
 interface DslToMermaidOptions {
     interactive?: boolean;
     includeIcons?: boolean;
+    useHtmlLabels?: boolean;
 }
 
 export function dslToMermaid(dsl: DslInput, options: DslToMermaidOptions = {}): string {
-    const { interactive = false, includeIcons = true } = options;
+    const { interactive = false, includeIcons = true, useHtmlLabels = true } = options;
     const escape = (str: string) => str.replace(/"/g, '#quot;').replace(/'/g, '`');
     
     let mermaidGraph = 'graph TD;\n';
@@ -40,17 +41,18 @@ export function dslToMermaid(dsl: DslInput, options: DslToMermaidOptions = {}): 
     dsl.components.forEach(c => {
         const label = escape(c.name);
         const type = escape(c.type);
+        const separator = useHtmlLabels ? `<br/>` : `\\n`;
 
-        if (includeIcons) {
+        if (includeIcons && useHtmlLabels) {
             const iconMap: Record<string, string> = {
                 actor: 'fa:fa-user',
                 service: 'fa:fa-server',
                 datastore: 'fa:fa-database',
             };
             const icon = iconMap[c.type] || 'fa:fa-box';
-            mermaidGraph += `    ${c.id}("${label}<br/>[<i class='${icon}'></i> ${type}]");\n`;
+            mermaidGraph += `    ${c.id}("${label}${separator}[<i class='${icon}'></i> ${type}]");\n`;
         } else {
-            mermaidGraph += `    ${c.id}("${label}<br/>[${type}]");\n`;
+            mermaidGraph += `    ${c.id}("${label}${separator}[${type}]");\n`;
         }
     });
 
