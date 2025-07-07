@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TEMPLATES } from '@/lib/templates';
-import { AlertCircle, Download, FileCode, Link as LinkIcon, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown, Plus, Minus } from 'lucide-react';
+import { AlertCircle, Download, FileCode, Link as LinkIcon, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StaticDiagram } from './static-diagram';
@@ -38,24 +38,6 @@ const initialState = {
   components: null,
   analyzedDsl: null,
 };
-
-function SubmitButton({ pending }: { pending: boolean }) {
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Analyzing...
-        </>
-      ) : (
-        <>
-          <Sparkles className="mr-2 h-4 w-4" />
-          Analyze Threats
-        </>
-      )}
-    </Button>
-  );
-}
 
 function VulnerabilityLink({ type, id }: { type: 'CVE' | 'CWE'; id: string }) {
     if (!id) return <>-</>;
@@ -109,14 +91,14 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
         <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-sm">
           <TableRow>
             <TableHead className="w-[120px] pl-6">
-                 <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4 gap-1">
+                 <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4 flex items-center gap-1">
                     Severity
                     {sortOrder === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
                 </Button>
             </TableHead>
             <TableHead className="w-[200px]">Affected Component</TableHead>
-            <TableHead className="w-[350px]">Threat</TableHead>
-            <TableHead className="w-[450px]">Mitigation</TableHead>
+            <TableHead>Threat</TableHead>
+            <TableHead>Mitigation</TableHead>
             <TableHead className="w-[80px] text-right">CVSS</TableHead>
             <TableHead className="w-[150px]">CVE</TableHead>
             <TableHead className="w-[120px] pr-6">CWE</TableHead>
@@ -259,7 +241,8 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     const analysisHasRun = !!state.threats;
     const analysisComponents = state.components || [];
     const dslForDiagram = state.analyzedDsl || dslInput;
-    const isConfigLocked = isPending || analysisHasRun;
+    const isSelectsLocked = isPending || analysisHasRun;
+    const dslHasChanged = analysisHasRun && state.analyzedDsl !== dslInput;
 
     const handlePdfExport = async () => {
         if (state.threats && state.components && state.analyzedDsl) {
@@ -291,7 +274,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                     <h2 className="text-lg font-semibold tracking-tight">Configuration</h2>
                     <div className="grid gap-2">
                         <label className="text-sm font-medium">Templates</label>
-                        <Select onValueChange={handleTemplateChange} defaultValue={TEMPLATES[0].name} disabled={isConfigLocked}>
+                        <Select onValueChange={handleTemplateChange} defaultValue={TEMPLATES[0].name} disabled={isSelectsLocked}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Load a template..." />
                             </SelectTrigger>
@@ -312,18 +295,18 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                             id="dsl-input"
                             name="dsl"
                             placeholder="Describe your architecture here..."
-                            className="font-code text-sm resize-none flex-1"
+                            className="font-code text-sm resize-none h-full"
                             value={dslInput}
                             onChange={(e) => setDslInput(e.target.value)}
                             required
-                            disabled={isConfigLocked}
+                            disabled={isPending}
                         />
                     </div>
                     <div className="grid gap-2">
                         <label htmlFor="methodology-select" className="text-sm font-medium">
                             Threat Modeling Methodology
                         </label>
-                        <Select name="methodology" defaultValue="STRIDE" required disabled={isConfigLocked}>
+                        <Select name="methodology" defaultValue="STRIDE" required disabled={isSelectsLocked}>
                             <SelectTrigger id="methodology-select">
                                 <SelectValue placeholder="Select methodology" />
                             </SelectTrigger>
@@ -339,20 +322,33 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                         </Select>
                     </div>
                     
-                    {isConfigLocked && !isPending ? (
+                    {isPending ? (
+                        <Button disabled={true} className="w-full">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Analyzing...
+                        </Button>
+                    ) : !analysisHasRun ? (
+                        <Button type="submit" className="w-full">
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Analyze Threats
+                        </Button>
+                    ) : dslHasChanged ? (
+                        <Button type="submit" className="w-full">
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Reanalyze Threats
+                        </Button>
+                    ) : (
                         <Button type="button" onClick={onReset} className="w-full">
                             <Wand2 className="mr-2 h-4 w-4" />
                             Start New Analysis
                         </Button>
-                    ) : (
-                        <SubmitButton pending={isPending} />
                     )}
 
                     <div className="flex items-center gap-2">
-                        <Button type="button" variant="outline" className="w-full" onClick={handlePdfExport} disabled={!analysisHasRun}>
+                        <Button type="button" variant="outline" className="w-full" onClick={handlePdfExport} disabled={!analysisHasRun || isPending}>
                             <Download className="mr-2 h-4 w-4"/> PDF
                         </Button>
-                        <Button type="button" variant="outline" className="w-full" onClick={handleMarkdownExport} disabled={!analysisHasRun}>
+                        <Button type="button" variant="outline" className="w-full" onClick={handleMarkdownExport} disabled={!analysisHasRun || isPending}>
                             <FileCode className="mr-2 h-4 w-4"/> Markdown
                         </Button>
                     </div>
