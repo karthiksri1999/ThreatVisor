@@ -29,6 +29,7 @@ import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Component } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
+import { cn } from '@/lib/utils';
 
 
 const initialState = {
@@ -107,30 +108,30 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
       <Table>
         <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-sm">
           <TableRow>
-            <TableHead className="w-[8%]">
-                 <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4">
+            <TableHead className="w-[120px] pl-6">
+                 <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4 gap-1">
                     Severity
-                    {sortOrder === 'desc' ? <ArrowDown className="ml-2 h-4 w-4" /> : <ArrowUp className="ml-2 h-4 w-4" />}
+                    {sortOrder === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
                 </Button>
             </TableHead>
-            <TableHead className="w-[15%]">Affected Component</TableHead>
-            <TableHead className="w-[25%]">Threat</TableHead>
-            <TableHead className="w-[30%]">Mitigation</TableHead>
-            <TableHead className="w-[7%] text-right">CVSS</TableHead>
-            <TableHead className="w-[8%]">CVE</TableHead>
-            <TableHead className="w-[7%]">CWE</TableHead>
+            <TableHead className="w-[200px]">Affected Component</TableHead>
+            <TableHead className="w-[350px]">Threat</TableHead>
+            <TableHead className="w-[450px]">Mitigation</TableHead>
+            <TableHead className="w-[80px] text-right">CVSS</TableHead>
+            <TableHead className="w-[150px]">CVE</TableHead>
+            <TableHead className="w-[120px] pr-6">CWE</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedThreats.map((threat, index) => (
-            <TableRow key={index}>
-              <TableCell><Badge variant={getSeverityVariant(threat.severity)}>{threat.severity}</Badge></TableCell>
+            <TableRow key={index} className="even:bg-muted/30">
+              <TableCell className="pl-6"><Badge variant={getSeverityVariant(threat.severity)}>{threat.severity}</Badge></TableCell>
               <TableCell className="font-medium">{componentMap.get(threat.affectedComponentId) || threat.affectedComponentId}</TableCell>
-              <TableCell>{threat.threat}</TableCell>
-              <TableCell>{threat.mitigation}</TableCell>
-              <TableCell className="text-right font-mono">{threat.cvss || '-'}</TableCell>
+              <TableCell className="text-sm">{threat.threat}</TableCell>
+              <TableCell className="text-sm">{threat.mitigation}</TableCell>
+              <TableCell className="text-right font-mono">{threat.cvss?.toFixed(1) || '-'}</TableCell>
               <TableCell className="font-mono text-xs"><VulnerabilityLink type="CVE" id={threat.cve || ''} /></TableCell>
-              <TableCell className="font-mono text-xs"><VulnerabilityLink type="CWE" id={threat.cwe || ''} /></TableCell>
+              <TableCell className="font-mono text-xs pr-6"><VulnerabilityLink type="CWE" id={threat.cwe || ''} /></TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -388,7 +389,10 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                     </TabsContent>
                     <TabsContent 
                         value="diagram" 
-                        className="flex-1 overflow-hidden m-0 p-0 data-[state=inactive]:absolute data-[state=inactive]:h-px data-[state=inactive]:w-px data-[state=inactive]:-left-[9999px]"
+                        className={cn(
+                          "flex-1 overflow-hidden m-0 p-0",
+                          "data-[state=inactive]:absolute data-[state=inactive]:h-px data-[state=inactive]:w-px data-[state=inactive]:-left-[9999px]"
+                        )}
                     >
                         <ResizablePanelGroup direction="vertical">
                             <ResizablePanel defaultSize={70}>
