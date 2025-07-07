@@ -323,7 +323,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                             id="dsl-input"
                             name="dsl"
                             placeholder="Describe your architecture here..."
-                            className="font-code text-sm resize-none bg-muted/50 flex-1"
+                            className="font-code text-sm resize-none bg-muted/50 h-full"
                             value={dslInput}
                             onChange={(e) => setDslInput(e.target.value)}
                             required
@@ -447,3 +447,5 @@ export function ThreatVisorClient() {
     </form>
   );
 }
+
+    
