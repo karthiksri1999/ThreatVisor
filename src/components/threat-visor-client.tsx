@@ -386,7 +386,10 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                     <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
                         <ThreatsTable threats={state.threats.threats} components={analysisComponents} />
                     </TabsContent>
-                    <TabsContent value="diagram" className="flex-1 overflow-hidden data-[state=inactive]:hidden m-0 p-0">
+                    <TabsContent 
+                        value="diagram" 
+                        className="flex-1 overflow-hidden m-0 p-0 data-[state=inactive]:absolute data-[state=inactive]:h-px data-[state=inactive]:w-px data-[state=inactive]:-left-[9999px]"
+                    >
                         <ResizablePanelGroup direction="vertical">
                             <ResizablePanel defaultSize={70}>
                                 <StaticDiagram 
