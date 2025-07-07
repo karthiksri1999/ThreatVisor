@@ -29,7 +29,6 @@ import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Component } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
-import mermaid from 'mermaid';
 import { dslToMermaid, initializeMermaid } from '@/lib/mermaid-utils';
 import { parseDsl } from '@/lib/dsl-parser';
 import { useTheme } from 'next-themes';
@@ -272,8 +271,12 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
             useHtmlLabels: false, // Prevents <br> which can also taint canvas
         });
 
-        return new Promise<string>((resolve, reject) => {
+        return new Promise<string>(async (resolve, reject) => {
             try {
+                // Dynamically import mermaid to ensure it's only loaded on the client-side
+                // and to avoid potential bundling issues where `document` is not available.
+                const mermaid = (await import('mermaid')).default;
+                
                 // IMPORTANT: Mermaid MUST be initialized before calling render.
                 initializeMermaid(theme);
                 
