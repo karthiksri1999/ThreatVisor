@@ -268,7 +268,13 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
             const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false, includeIcons: false });
             // Use a unique ID for each render to avoid mermaid cache issues
             const { svg } = await mermaid.render(`export-${Date.now()}`, mermaidGraph);
-            return svg;
+            
+            // POST-PROCESSING: To prevent canvas-tainting errors during PDF generation,
+            // remove references to external fonts ('Inter') and replace them with a generic
+            // browser-safe font. This ensures the SVG is self-contained.
+            const cleanedSvg = svg.replace(/font-family: "Inter", sans-serif;/g, 'font-family: sans-serif;');
+
+            return cleanedSvg;
         } catch (e) {
             console.error("Failed to render diagram for export:", e);
             return '<!-- Diagram could not be generated -->';
