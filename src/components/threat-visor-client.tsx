@@ -29,6 +29,9 @@ import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Component } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
+import mermaid from 'mermaid';
+import { dslToMermaid } from '@/lib/mermaid-utils';
+import { parseDsl } from '@/lib/dsl-parser';
 
 
 const initialState = {
@@ -252,51 +255,68 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     const dslHasChanged = analysisHasRun && normalize(state.analyzedDsl) !== normalize(dslInput);
 
     /**
-     * Grabs the live SVG diagram from the DOM and returns it as a string after cleaning
-     * it of elements that can cause security errors during image conversion (canvas tainting).
-     * @returns A cleaned SVG string or an empty string if no diagram is found.
+     * Generates a "clean" SVG for exporting. This function renders the diagram headlessly
+     * with specific options to make it safe for conversion to other formats like PNG,
+     * avoiding browser security errors related to external resources or complex HTML.
+     * @param dslString The architecture definition string.
+     * @returns A promise that resolves with the clean SVG string.
      */
-    const getCleanedSvgForExport = (): string => {
-        const svgElement = document.querySelector('.mermaid-container svg');
-        if (!svgElement) {
-            console.error("Export failed: Could not find the SVG diagram element.");
-            return '';
-        }
-    
-        // Use XMLSerializer to get the full SVG markup as a string
-        let svgString = new XMLSerializer().serializeToString(svgElement);
-    
-        // --- Cleaning Steps to prevent canvas tainting ---
-    
-        // 1. Remove <foreignObject> elements. Mermaid uses these to embed HTML like
-        //    Font Awesome <i> tags, which are external resources.
-        svgString = svgString.replace(/<foreignObject.*?>.*?<\/foreignObject>/g, '');
-    
-        // 2. Replace the 'Inter' web font with a generic, browser-safe font.
-        svgString = svgString.replace(/font-family:\s*['"]Inter['"]/g, "font-family: 'sans-serif'");
-        
-        return svgString;
-    }
+    const generateDiagramSvgForExport = (dslString: string): Promise<string> => {
+        const parsedDsl = parseDsl(dslString);
+        // Generate a definition that is safe for export (no complex HTML or icons).
+        const mermaidGraph = dslToMermaid(parsedDsl, {
+            interactive: false,
+            includeIcons: false, // Prevents <foreignObject> which can taint canvas
+            useHtmlLabels: false, // Prevents <br> which can also taint canvas
+        });
+
+        return new Promise<string>((resolve, reject) => {
+            try {
+                // IMPORTANT: Mermaid MUST be initialized before calling render.
+                // It's initialized in StaticDiagram, so it should be available globally.
+                mermaid.render(`headless-export-${Date.now()}`, mermaidGraph, (svgCode) => {
+                    // The output of mermaid.render might still contain the 'Inter' font from global config.
+                    // Replace it with a generic font to be 100% safe.
+                    const finalSvg = svgCode.replace(/font-family:\s*['"]Inter['"]/g, "font-family: 'sans-serif'");
+                    resolve(finalSvg);
+                });
+            } catch (e) {
+                console.error("Headless mermaid render failed:", e);
+                reject(new Error("Failed to render diagram for export."));
+            }
+        });
+    };
 
     const handlePdfExport = async () => {
         if (!state.threats || !state.components || !state.analyzedDsl) return;
-        const diagramSvg = getCleanedSvgForExport();
-        if (!diagramSvg) return;
-        await generatePdfReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
+        try {
+            const diagramSvg = await generateDiagramSvgForExport(state.analyzedDsl);
+            if (!diagramSvg) return;
+            await generatePdfReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
+        } catch(e) {
+            console.error("PDF Export failed:", e);
+        }
     };
 
     const handleMarkdownExport = async () => {
         if (!state.threats || !state.components || !state.analyzedDsl) return;
-        const diagramSvg = getCleanedSvgForExport();
-        if (!diagramSvg) return;
-        const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
-        const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'ThreatVisor-Report.md';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        try {
+            // For consistency and to prevent any potential rendering issues in different markdown viewers,
+            // we use the same clean SVG generation method as the PDF export.
+            const diagramSvg = await generateDiagramSvgForExport(state.analyzedDsl);
+            if (!diagramSvg) return;
+
+            const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
+            const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'ThreatVisor-Report.md';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch(e) {
+             console.error("Markdown Export failed:", e);
+        }
     };
     
     return (
