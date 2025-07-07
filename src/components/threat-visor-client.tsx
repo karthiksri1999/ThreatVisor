@@ -30,8 +30,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Component } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
 import mermaid from 'mermaid';
-import { dslToMermaid } from '@/lib/mermaid-utils';
+import { dslToMermaid, initializeMermaid } from '@/lib/mermaid-utils';
 import { parseDsl } from '@/lib/dsl-parser';
+import { useTheme } from 'next-themes';
 
 
 const initialState = {
@@ -222,6 +223,7 @@ function ResultsSkeleton() {
 function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialState; isPending: boolean; onReset: () => void; }) {
     const [dslInput, setDslInput] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const { resolvedTheme } = useTheme();
 
     useEffect(() => {
         // On initial load or after a reset, state.analyzedDsl is null. Use the template.
@@ -261,7 +263,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
      * @param dslString The architecture definition string.
      * @returns A promise that resolves with the clean SVG string.
      */
-    const generateDiagramSvgForExport = (dslString: string): Promise<string> => {
+    const generateDiagramSvgForExport = (dslString: string, theme: 'dark' | 'light' | 'default'): Promise<string> => {
         const parsedDsl = parseDsl(dslString);
         // Generate a definition that is safe for export (no complex HTML or icons).
         const mermaidGraph = dslToMermaid(parsedDsl, {
@@ -273,7 +275,8 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
         return new Promise<string>((resolve, reject) => {
             try {
                 // IMPORTANT: Mermaid MUST be initialized before calling render.
-                // It's initialized in StaticDiagram, so it should be available globally.
+                initializeMermaid(theme);
+                
                 mermaid.render(`headless-export-${Date.now()}`, mermaidGraph, (svgCode) => {
                     // The output of mermaid.render might still contain the 'Inter' font from global config.
                     // Replace it with a generic font to be 100% safe.
@@ -288,9 +291,9 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     };
 
     const handlePdfExport = async () => {
-        if (!state.threats || !state.components || !state.analyzedDsl) return;
+        if (!state.threats || !state.components || !state.analyzedDsl || !resolvedTheme) return;
         try {
-            const diagramSvg = await generateDiagramSvgForExport(state.analyzedDsl);
+            const diagramSvg = await generateDiagramSvgForExport(state.analyzedDsl, resolvedTheme as any);
             if (!diagramSvg) return;
             await generatePdfReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
         } catch(e) {
@@ -299,11 +302,11 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     };
 
     const handleMarkdownExport = async () => {
-        if (!state.threats || !state.components || !state.analyzedDsl) return;
+        if (!state.threats || !state.components || !state.analyzedDsl || !resolvedTheme) return;
         try {
             // For consistency and to prevent any potential rendering issues in different markdown viewers,
             // we use the same clean SVG generation method as the PDF export.
-            const diagramSvg = await generateDiagramSvgForExport(state.analyzedDsl);
+            const diagramSvg = await generateDiagramSvgForExport(state.analyzedDsl, resolvedTheme as any);
             if (!diagramSvg) return;
 
             const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
