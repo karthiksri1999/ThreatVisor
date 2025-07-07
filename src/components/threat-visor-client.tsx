@@ -27,12 +27,8 @@ import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Component, parseDsl } from '@/lib/dsl-parser';
+import { Component } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
-import { cn } from '@/lib/utils';
-import { useTheme } from 'next-themes';
-import mermaid from 'mermaid';
-import { dslToMermaid, initializeMermaid, getMermaidThemeVariables } from '@/lib/mermaid-utils';
 
 
 const initialState = {
@@ -223,8 +219,6 @@ function ResultsSkeleton() {
 function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialState; isPending: boolean; onReset: () => void; }) {
     const [dslInput, setDslInput] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-    const { resolvedTheme } = useTheme();
-
 
     useEffect(() => {
         // On initial load or after a reset, state.analyzedDsl is null. Use the template.
@@ -257,44 +251,44 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     const normalize = (s: string | null | undefined) => (s || '').replace(/\r\n/g, '\n').trim();
     const dslHasChanged = analysisHasRun && normalize(state.analyzedDsl) !== normalize(dslInput);
 
-    const generateDiagramForExport = async (): Promise<string> => {
-        if (!state.analyzedDsl) return '<!-- No DSL to render -->';
-    
-        try {
-            // Temporarily re-initialize Mermaid with export-safe settings
-            const mermaidTheme = resolvedTheme === 'dark' ? 'dark' : 'default';
-            mermaid.initialize({
-              startOnLoad: false,
-              theme: mermaidTheme,
-              fontFamily: 'sans-serif', // Use a web-safe font to prevent canvas tainting
-              securityLevel: 'loose',
-              themeVariables: getMermaidThemeVariables(resolvedTheme as any),
-            });
-
-            const parsedDsl = parseDsl(state.analyzedDsl);
-            // Render without interactive elements, icons, or HTML labels to prevent canvas tainting
-            const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false, includeIcons: false, useHtmlLabels: false });
-            
-            const { svg } = await mermaid.render(`export-${Date.now()}`, mermaidGraph);
-            return svg;
-        } catch (e) {
-            console.error("Failed to render diagram for export:", e);
-            return '<!-- Diagram could not be generated -->';
-        } finally {
-            // ALWAYS restore the original Mermaid configuration for the live diagram
-            initializeMermaid(resolvedTheme as any);
+    /**
+     * Grabs the live SVG diagram from the DOM and returns it as a string after cleaning
+     * it of elements that can cause security errors during image conversion (canvas tainting).
+     * @returns A cleaned SVG string or an empty string if no diagram is found.
+     */
+    const getCleanedSvgForExport = (): string => {
+        const svgElement = document.querySelector('.mermaid-container svg');
+        if (!svgElement) {
+            console.error("Export failed: Could not find the SVG diagram element.");
+            return '';
         }
+    
+        // Use XMLSerializer to get the full SVG markup as a string
+        let svgString = new XMLSerializer().serializeToString(svgElement);
+    
+        // --- Cleaning Steps to prevent canvas tainting ---
+    
+        // 1. Remove <foreignObject> elements. Mermaid uses these to embed HTML like
+        //    Font Awesome <i> tags, which are external resources.
+        svgString = svgString.replace(/<foreignObject.*?>.*?<\/foreignObject>/g, '');
+    
+        // 2. Replace the 'Inter' web font with a generic, browser-safe font.
+        svgString = svgString.replace(/font-family:\s*['"]Inter['"]/g, "font-family: 'sans-serif'");
+        
+        return svgString;
     }
 
     const handlePdfExport = async () => {
         if (!state.threats || !state.components || !state.analyzedDsl) return;
-        const diagramSvg = await generateDiagramForExport();
+        const diagramSvg = getCleanedSvgForExport();
+        if (!diagramSvg) return;
         await generatePdfReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
     };
 
     const handleMarkdownExport = async () => {
         if (!state.threats || !state.components || !state.analyzedDsl) return;
-        const diagramSvg = await generateDiagramForExport();
+        const diagramSvg = getCleanedSvgForExport();
+        if (!diagramSvg) return;
         const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
         const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
         const link = document.createElement('a');

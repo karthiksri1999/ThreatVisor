@@ -20,15 +20,11 @@ async function svgToPngDataUrl(svg: string, width: number, height: number): Prom
       if (!ctx) {
         return reject(new Error('Could not get canvas context'));
       }
-
-      // Set a white background, since SVG might be transparent
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       ctx.scale(scale, scale);
   
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height);
+        ctx.drawImage(img, 0, 0);
         const pngDataUrl = canvas.toDataURL('image/png');
         resolve(pngDataUrl);
       };
