@@ -9,7 +9,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import { AboutDialog } from './about-dialog';
@@ -34,7 +33,7 @@ export function Header() {
                 </Link>
               </Button>
               <Button variant="ghost" asChild>
-                <Link href="#">
+                <Link href="/documentation">
                   <Book className="mr-2 h-4 w-4" /> Documentation
                 </Link>
               </Button>
@@ -59,7 +58,7 @@ export function Header() {
                     <Link href="/diff">Compare Models</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="#">Documentation</Link>
+                    <Link href="/documentation">Documentation</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setAboutOpen(true)}>
                     About
