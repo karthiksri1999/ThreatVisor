@@ -4,47 +4,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { useTheme } from 'next-themes';
-import { parseDsl, DslInput } from '@/lib/dsl-parser';
+import { parseDsl } from '@/lib/dsl-parser';
 import { Button } from './ui/button';
 import { Plus, Minus } from 'lucide-react';
-
-function dslToMermaid(dsl: DslInput): string {
-    const escape = (str: string) => str.replace(/"/g, '#quot;').replace(/'/g, '`');
-    
-    let mermaidGraph = 'graph TD;\n';
-
-    dsl.components.forEach(c => {
-        const iconMap: Record<string, string> = {
-            actor: 'fa:fa-user',
-            service: 'fa:fa-server',
-            datastore: 'fa:fa-database',
-        };
-        const icon = iconMap[c.type] || 'fa:fa-box';
-        mermaidGraph += `    ${c.id}("${escape(c.name)}<br/>[<i class='${icon}'></i> ${escape(c.type)}]");\n`;
-    });
-
-    dsl.data_flows.forEach(flow => {
-        mermaidGraph += `    ${flow.from} -- "${escape(flow.label)}" --> ${flow.to};\n`;
-    });
-
-    if (dsl.trust_boundaries) {
-        dsl.trust_boundaries.forEach(boundary => {
-            // Use subgraph id ["label"] for robustness, especially with spaces in labels.
-            mermaidGraph += `\n    subgraph ${boundary.id} ["${escape(boundary.label)}"]\n`;
-            boundary.components.forEach(componentId => {
-                mermaidGraph += `        ${componentId}\n`;
-            });
-            mermaidGraph += `    end\n`;
-        });
-    }
-
-    dsl.components.forEach(c => {
-        mermaidGraph += `    click ${c.id} call handleNodeClick("${c.id}") "Click to see details";\n`;
-    });
-
-    return mermaidGraph;
-}
-
+import { dslToMermaid, initializeMermaid } from '@/lib/mermaid-utils';
 
 type StaticDiagramProps = {
   dsl: string;
@@ -73,7 +36,7 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   useEffect(() => {
     try {
       const parsedDsl = parseDsl(dsl);
-      const mermaidGraph = dslToMermaid(parsedDsl);
+      const mermaidGraph = dslToMermaid(parsedDsl, { interactive: true });
       setDiagram(mermaidGraph);
       setDslError(null);
     } catch (e: any) {
@@ -88,34 +51,10 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
     if (!diagram || !containerRef.current) return;
 
     const container = containerRef.current;
+    // Add a key to the div to force re-render, which can help with mermaid's reactivity
     container.innerHTML = `<div class="mermaid" key="${Date.now()}">${diagram}</div>`;
     
-    const mermaidTheme = resolvedTheme === 'dark' ? 'dark' : 'default';
-
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: mermaidTheme,
-      fontFamily: 'Inter, sans-serif',
-      themeVariables: {
-        background: resolvedTheme === 'dark' ? '#212836' : '#FFFFFF',
-        
-        // Node styles
-        primaryColor: resolvedTheme === 'dark' ? '#2a3344' : '#f5f7f7',
-        primaryTextColor: resolvedTheme === 'dark' ? '#e5e7eb' : '#111827',
-        primaryBorderColor: '#3F51B5',
-
-        // Edge styles
-        lineColor: resolvedTheme === 'dark' ? '#4B5563' : '#9CA3AF',
-        
-        // Cluster (subgraph/trust boundary) styles
-        clusterBkg: resolvedTheme === 'dark' ? '#2a3344' : '#f5f7f7',
-        clusterTitleColor: resolvedTheme === 'dark' ? '#e5e7eb' : '#111827',
-        clusterBorder: '#009688', // Use accent color for the border
-
-        secondaryColor: '#009688',
-      },
-      securityLevel: 'loose'
-    });
+    initializeMermaid(resolvedTheme as any);
 
     mermaid.run({
       nodes: container.querySelectorAll('.mermaid'),
@@ -129,15 +68,17 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
     const svg = containerRef.current.querySelector('svg');
     if (!svg) return;
 
+    // Clear previous selections
     svg.querySelectorAll('.node.selected').forEach(el => el.classList.remove('selected'));
 
     if (selectedNodeId) {
+        // Use CSS escaping for IDs that might contain special characters
         const nodeElement = svg.querySelector(`#${CSS.escape(selectedNodeId)}`);
         if (nodeElement) {
             nodeElement.classList.add('selected');
         }
     }
-   }, [selectedNodeId, diagram, resolvedTheme]);
+   }, [selectedNodeId, diagram, resolvedTheme]); // Rerun when diagram changes to re-apply selection
 
 
   const handleZoom = (direction: 'in' | 'out') => {

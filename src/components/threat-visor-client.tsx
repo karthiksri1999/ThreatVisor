@@ -27,9 +27,12 @@ import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Component } from '@/lib/dsl-parser';
+import { Component, parseDsl } from '@/lib/dsl-parser';
 import { generateMarkdownReport, generatePdfReport } from '@/lib/exporter';
 import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
+import mermaid from 'mermaid';
+import { dslToMermaid, initializeMermaid } from '@/lib/mermaid-utils';
 
 
 const initialState = {
@@ -220,6 +223,8 @@ function ResultsSkeleton() {
 function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialState; isPending: boolean; onReset: () => void; }) {
     const [dslInput, setDslInput] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const { resolvedTheme } = useTheme();
+
 
     useEffect(() => {
         // On initial load or after a reset, state.analyzedDsl is null. Use the template.
@@ -252,27 +257,41 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     const normalize = (s: string | null | undefined) => (s || '').replace(/\r\n/g, '\n').trim();
     const dslHasChanged = analysisHasRun && normalize(state.analyzedDsl) !== normalize(dslInput);
 
-    const handlePdfExport = async () => {
-        if (state.threats && state.components && state.analyzedDsl) {
-            const svgEl = document.querySelector('.mermaid-container > svg');
-            const diagramSvg = svgEl ? svgEl.outerHTML : '';
-            await generatePdfReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
+    const generateDiagramForExport = async (): Promise<string> => {
+        if (!state.analyzedDsl) return '<!-- No DSL to render -->';
+    
+        try {
+            // Must be initialized before every render call for exports to work reliably
+            initializeMermaid(resolvedTheme as any);
+            const parsedDsl = parseDsl(state.analyzedDsl);
+            // Render without interactive elements for a cleaner export
+            const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false });
+            // Use a unique ID for each render to avoid mermaid cache issues
+            const { svg } = await mermaid.render(`export-${Date.now()}`, mermaidGraph);
+            return svg;
+        } catch (e) {
+            console.error("Failed to render diagram for export:", e);
+            return '<!-- Diagram could not be generated -->';
         }
+    }
+
+    const handlePdfExport = async () => {
+        if (!state.threats || !state.components || !state.analyzedDsl) return;
+        const diagramSvg = await generateDiagramForExport();
+        await generatePdfReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
     };
 
-    const handleMarkdownExport = () => {
-        if (state.threats && state.components && state.analyzedDsl) {
-            const svgEl = document.querySelector('.mermaid-container > svg');
-            const diagramSvg = svgEl ? svgEl.outerHTML : '<!-- Diagram could not be generated -->';
-            const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
-            const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'ThreatVisor-Report.md';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+    const handleMarkdownExport = async () => {
+        if (!state.threats || !state.components || !state.analyzedDsl) return;
+        const diagramSvg = await generateDiagramForExport();
+        const markdownContent = generateMarkdownReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
+        const blob = new Blob([markdownContent], { type: 'text/markdown;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'ThreatVisor-Report.md';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
     
     return (
@@ -401,13 +420,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                     <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
                         <ThreatsTable threats={state.threats.threats} components={analysisComponents} />
                     </TabsContent>
-                    <TabsContent 
-                        value="diagram" 
-                        className={cn(
-                          "flex-1 overflow-hidden m-0 p-0",
-                          "data-[state=inactive]:absolute data-[state=inactive]:h-px data-[state=inactive]:w-px data-[state=inactive]:-left-[9999px]"
-                        )}
-                    >
+                    <TabsContent value="diagram" className="flex-1 overflow-hidden m-0 p-0">
                         <ResizablePanelGroup direction="vertical">
                             <ResizablePanel defaultSize={70}>
                                 <StaticDiagram 
