@@ -34,9 +34,9 @@ async function svgToPngDataUrl(svg: string, width: number, height: number): Prom
         resolve(pngDataUrl);
       };
   
-      img.onerror = (err) => {
+      img.onerror = () => {
         URL.revokeObjectURL(url); // Clean up blob URL
-        reject(new Error(`Failed to load SVG into image: ${err}`));
+        reject(new Error('Failed to load SVG into image. This may be due to external resources like fonts in the SVG that cannot be loaded for security reasons.'));
       };
   
       // Ensure SVG has xmlns attribute which is sometimes required for data URI loading
@@ -65,6 +65,7 @@ export function generateMarkdownReport(
 
   if (diagramSvg) {
     markdown += `## Diagram\n\n`;
+    // Embed SVG directly in Markdown
     markdown += `${diagramSvg}\n\n`;
   }
 
@@ -78,6 +79,7 @@ export function generateMarkdownReport(
     const cleanThreat = threat.threat.replace(/\|/g, '\\|').replace(/\n/g, '<br />');
     const cleanMitigation = threat.mitigation.replace(/\|/g, '\\|').replace(/\n/g, '<br />');
     
+    // CVE and CWE were swapped in a previous version, ensuring they are correct now.
     markdown += `| ${threat.severity} | ${componentName} | ${cleanThreat} | ${cleanMitigation} | ${threat.cvss?.toFixed(1) || 'N/A'} | ${threat.cve || 'N/A'} | ${threat.cwe || 'N/A'} |\n`;
   });
 

@@ -24,22 +24,30 @@ export function initializeMermaid(theme: 'dark' | 'light' | 'default') {
 
 interface DslToMermaidOptions {
     interactive?: boolean;
+    includeIcons?: boolean;
 }
 
 export function dslToMermaid(dsl: DslInput, options: DslToMermaidOptions = {}): string {
-    const { interactive = false } = options;
+    const { interactive = false, includeIcons = true } = options;
     const escape = (str: string) => str.replace(/"/g, '#quot;').replace(/'/g, '`');
     
     let mermaidGraph = 'graph TD;\n';
 
     dsl.components.forEach(c => {
-        const iconMap: Record<string, string> = {
-            actor: 'fa:fa-user',
-            service: 'fa:fa-server',
-            datastore: 'fa:fa-database',
-        };
-        const icon = iconMap[c.type] || 'fa:fa-box';
-        mermaidGraph += `    ${c.id}("${escape(c.name)}<br/>[<i class='${icon}'></i> ${escape(c.type)}]");\n`;
+        const label = escape(c.name);
+        const type = escape(c.type);
+
+        if (includeIcons) {
+            const iconMap: Record<string, string> = {
+                actor: 'fa:fa-user',
+                service: 'fa:fa-server',
+                datastore: 'fa:fa-database',
+            };
+            const icon = iconMap[c.type] || 'fa:fa-box';
+            mermaidGraph += `    ${c.id}("${label}<br/>[<i class='${icon}'></i> ${type}]");\n`;
+        } else {
+            mermaidGraph += `    ${c.id}("${label}<br/>[${type}]");\n`;
+        }
     });
 
     dsl.data_flows.forEach(flow => {

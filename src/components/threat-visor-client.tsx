@@ -95,17 +95,17 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
         <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-sm">
           <TableRow>
             <TableHead className="w-[120px] pl-6">
-                 <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent -ml-4 flex items-center gap-1">
+                 <Button type="button" variant="ghost" onClick={toggleSortOrder} className="px-0 hover:bg-transparent flex items-center gap-1">
                     Severity
                     {sortOrder === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
                 </Button>
             </TableHead>
-            <TableHead className="w-[200px]">Affected Component</TableHead>
+            <TableHead className="min-w-[200px]">Affected Component</TableHead>
             <TableHead>Threat</TableHead>
             <TableHead>Mitigation</TableHead>
             <TableHead className="w-[80px] text-right">CVSS</TableHead>
-            <TableHead className="w-[150px]">CVE</TableHead>
-            <TableHead className="w-[120px] pr-6">CWE</TableHead>
+            <TableHead className="min-w-[150px]">CVE</TableHead>
+            <TableHead className="min-w-[120px] pr-6">CWE</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -264,8 +264,8 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
             // Must be initialized before every render call for exports to work reliably
             initializeMermaid(resolvedTheme as any);
             const parsedDsl = parseDsl(state.analyzedDsl);
-            // Render without interactive elements for a cleaner export
-            const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false });
+            // Render without interactive elements or icons for a cleaner export that avoids font issues
+            const mermaidGraph = dslToMermaid(parsedDsl, { interactive: false, includeIcons: false });
             // Use a unique ID for each render to avoid mermaid cache issues
             const { svg } = await mermaid.render(`export-${Date.now()}`, mermaidGraph);
             return svg;
@@ -420,7 +420,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                     <TabsContent value="threats" className="flex-1 overflow-auto data-[state=inactive]:hidden">
                         <ThreatsTable threats={state.threats.threats} components={analysisComponents} />
                     </TabsContent>
-                    <TabsContent value="diagram" className="flex-1 overflow-hidden m-0 p-0">
+                    <TabsContent value="diagram" className="flex-1 overflow-hidden m-0 data-[state=inactive]:absolute data-[state=inactive]:-left-[9999px] data-[state=inactive]:top-auto data-[state=inactive]:h-1 data-[state=inactive]:w-1">
                         <ResizablePanelGroup direction="vertical">
                             <ResizablePanel defaultSize={70}>
                                 <StaticDiagram 
