@@ -5,6 +5,52 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 
+// Helper function to convert SVG to PNG data URL for PDF embedding
+async function svgToPngDataUrl(svg: string, width: number, height: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      
+      // Use a scaling factor for better resolution in the PDF
+      const scale = 2;
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext('2d');
+  
+      if (!ctx) {
+        return reject(new Error('Could not get canvas context'));
+      }
+
+      // Set a white background, since SVG might be transparent
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.scale(scale, scale);
+  
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, width, height);
+        const pngDataUrl = canvas.toDataURL('image/png');
+        URL.revokeObjectURL(url); // Clean up blob URL
+        resolve(pngDataUrl);
+      };
+  
+      img.onerror = (err) => {
+        URL.revokeObjectURL(url); // Clean up blob URL
+        reject(new Error(`Failed to load SVG into image: ${err}`));
+      };
+  
+      // Ensure SVG has xmlns attribute which is sometimes required for data URI loading
+      const svgWithXmlns = svg.startsWith('<svg') 
+        ? svg.replace(/<svg/, '<svg xmlns="http://www.w3.org/2000/svg"') 
+        : `<?xml version="1.0" standalone="no"?>\r\n${svg}`;
+
+      const svgBlob = new Blob([svgWithXmlns], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      img.src = url;
+    });
+}
+
+
 export function generateMarkdownReport(
   threatData: ThreatSuggestionsOutput,
   components: Component[],
@@ -32,7 +78,7 @@ export function generateMarkdownReport(
     const cleanThreat = threat.threat.replace(/\|/g, '\\|').replace(/\n/g, '<br />');
     const cleanMitigation = threat.mitigation.replace(/\|/g, '\\|').replace(/\n/g, '<br />');
     
-    markdown += `| ${threat.severity} | ${componentName} | ${cleanThreat} | ${cleanMitigation} | ${threat.cvss || 'N/A'} | ${threat.cwe || 'N/A'} | ${threat.cve || 'N/A'} |\n`;
+    markdown += `| ${threat.severity} | ${componentName} | ${cleanThreat} | ${cleanMitigation} | ${threat.cvss?.toFixed(1) || 'N/A'} | ${threat.cve || 'N/A'} | ${threat.cwe || 'N/A'} |\n`;
   });
 
   return markdown;
@@ -81,9 +127,21 @@ export async function generatePdfReport(
     doc.text('Diagram', margin, currentY);
     currentY += 20;
     
-    // jsPDF's addImage supports SVG content directly
-    doc.addImage(diagramSvg, 'SVG', margin, currentY, contentWidth, contentWidth / 2);
-    currentY += (contentWidth / 2) + 20;
+    const diagramWidth = contentWidth;
+    const diagramHeight = contentWidth / 2;
+
+    try {
+        const pngDataUrl = await svgToPngDataUrl(diagramSvg, diagramWidth, diagramHeight);
+        doc.addImage(pngDataUrl, 'PNG', margin, currentY, diagramWidth, diagramHeight);
+        currentY += diagramHeight + 20;
+    } catch(e) {
+        console.error("Failed to convert SVG to PNG for PDF export:", e);
+        doc.setFontSize(10);
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text("Could not render diagram due to a processing error.", margin, currentY);
+        doc.setTextColor(0, 0, 0); // Reset to black
+        currentY += 20;
+    }
   }
   
   // Threats Table
@@ -94,7 +152,7 @@ export async function generatePdfReport(
     componentMap.get(threat.affectedComponentId) || threat.affectedComponentId,
     threat.threat,
     threat.mitigation,
-    threat.cvss?.toString() || 'N/A',
+    threat.cvss?.toFixed(1) || 'N/A',
     threat.cve || 'N/A',
     threat.cwe || 'N/A'
   ]));
@@ -110,8 +168,13 @@ export async function generatePdfReport(
       fontSize: 8,
     },
     columnStyles: {
+      0: { cellWidth: 50 },
+      1: { cellWidth: 80 },
       2: { cellWidth: 'auto' }, // Threat
       3: { cellWidth: 'auto' }, // Mitigation
+      4: { cellWidth: 30, halign: 'right' },
+      5: { cellWidth: 70 },
+      6: { cellWidth: 60 }
     }
   });
 
