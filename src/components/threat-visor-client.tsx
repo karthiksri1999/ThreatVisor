@@ -37,6 +37,7 @@ const initialState = {
   error: null,
   components: null,
   analyzedDsl: null,
+  analyzedMethodology: null,
 };
 
 function VulnerabilityLink({ type, id }: { type: 'CVE' | 'CWE'; id: string }) {
@@ -221,9 +222,14 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
     useEffect(() => {
-        const initialContent = TEMPLATES[0].content;
-        setDslInput(initialContent);
-    }, []);
+        // On initial load or after a reset, state.analyzedDsl is null. Use the template.
+        // If an analysis fails, state.analyzedDsl will have the user's attempted DSL, so we preserve it.
+        if (state.analyzedDsl) {
+            setDslInput(state.analyzedDsl);
+        } else {
+            setDslInput(TEMPLATES[0].content);
+        }
+    }, [state.analyzedDsl]);
     
     // Reset node selection if the underlying data changes
     useEffect(() => {
@@ -242,7 +248,9 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     const analysisComponents = state.components || [];
     const dslForDiagram = state.analyzedDsl || dslInput;
     const isSelectsLocked = isPending || analysisHasRun;
-    const dslHasChanged = analysisHasRun && state.analyzedDsl !== dslInput;
+    
+    const normalize = (s: string | null | undefined) => (s || '').replace(/\r\n/g, '\n').trim();
+    const dslHasChanged = analysisHasRun && normalize(state.analyzedDsl) !== normalize(dslInput);
 
     const handlePdfExport = async () => {
         if (state.threats && state.components && state.analyzedDsl) {
@@ -274,7 +282,11 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                     <h2 className="text-lg font-semibold tracking-tight">Configuration</h2>
                     <div className="grid gap-2">
                         <label className="text-sm font-medium">Templates</label>
-                        <Select onValueChange={handleTemplateChange} defaultValue={TEMPLATES[0].name} disabled={isSelectsLocked}>
+                        <Select 
+                            onValueChange={handleTemplateChange} 
+                            defaultValue={TEMPLATES[0].name} 
+                            disabled={isSelectsLocked}
+                        >
                             <SelectTrigger>
                                 <SelectValue placeholder="Load a template..." />
                             </SelectTrigger>
@@ -306,7 +318,13 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                         <label htmlFor="methodology-select" className="text-sm font-medium">
                             Threat Modeling Methodology
                         </label>
-                        <Select name="methodology" defaultValue="STRIDE" required disabled={isSelectsLocked}>
+                        <Select 
+                            name="methodology" 
+                            defaultValue={state.analyzedMethodology || "STRIDE"}
+                            key={state.analyzedMethodology} // Re-mount when methodology changes
+                            required 
+                            disabled={isSelectsLocked}
+                        >
                             <SelectTrigger id="methodology-select">
                                 <SelectValue placeholder="Select methodology" />
                             </SelectTrigger>

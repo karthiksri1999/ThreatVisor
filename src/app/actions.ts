@@ -8,6 +8,7 @@ interface FormState {
   error: string | null;
   components: Component[] | null;
   analyzedDsl: string | null;
+  analyzedMethodology: string | null;
 }
 
 export async function analyzeThreatsAction(
@@ -15,14 +16,16 @@ export async function analyzeThreatsAction(
   formData: FormData
 ): Promise<FormState> {
   const dsl = formData.get('dsl') as string;
-  const methodology = formData.get('methodology') as 'STRIDE' | 'LINDDUN' | 'PASTA' | 'OWASP Top 10' | 'OWASP API Top 10' | 'MITRE ATT&CK' | 'OCTAVE';
+  // If the methodology is in the form data, use it. Otherwise, use the one from the previous state (for re-analysis).
+  const methodology = (formData.get('methodology') as string) || prevState.analyzedMethodology;
 
   if (!dsl || !methodology) {
     return {
       threats: null,
       error: 'Missing architecture definition or methodology.',
       components: null,
-      analyzedDsl: null,
+      analyzedDsl: dsl,
+      analyzedMethodology: prevState.analyzedMethodology,
     };
   }
 
@@ -32,7 +35,7 @@ export async function analyzeThreatsAction(
 
     const threats = await suggestThreatsAndMitigations({
       architectureDescription: dsl,
-      threatModelingMethodology: methodology,
+      threatModelingMethodology: methodology as any,
     });
     
     if (!threats || !threats.threats) {
@@ -40,17 +43,19 @@ export async function analyzeThreatsAction(
             threats: null,
             error: 'The AI returned an empty or invalid response. Please try again or adjust your input.',
             components: null,
-            analyzedDsl: null,
+            analyzedDsl: dsl,
+            analyzedMethodology: methodology,
         }
     }
 
-    return { threats, error: null, components: parsedDsl.components, analyzedDsl: dsl };
+    return { threats, error: null, components: parsedDsl.components, analyzedDsl: dsl, analyzedMethodology: methodology };
   } catch (e: any) {
     return {
       threats: null,
       error: e.message || 'An unexpected error occurred.',
       components: null,
-      analyzedDsl: null,
+      analyzedDsl: dsl,
+      analyzedMethodology: methodology,
     };
   }
 }
