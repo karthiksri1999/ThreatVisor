@@ -84,7 +84,7 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
         return [...threats].sort((a, b) => {
             const valA = severityValues[a.severity];
             const valB = severityValues[b.severity];
-            return sortOrder === 'desc' ? valB - valA : valA - bVal;
+            return sortOrder === 'desc' ? valB - valA : valA - valB;
         });
     }, [threats, sortOrder]);
 
@@ -184,7 +184,7 @@ function ThreatDetailsPanel({ selectedNodeId, threats, components }: { selectedN
                                 <TableCell><Badge variant={getSeverityVariant(threat.severity)}>{threat.severity}</Badge></TableCell>
                                 <TableCell>{threat.threat}</TableCell>
                                 <TableCell>{threat.mitigation}</TableCell>
-                                <TableCell className="font-mono">{threat.cvss || '-'}</TableCell>
+                                <TableCell className="font-mono">{threat.cvss?.toFixed(1) || '-'}</TableCell>
                                 <TableCell className="font-mono text-xs"><VulnerabilityLink type="CVE" id={threat.cve || ''} /></TableCell>
                                 <TableCell className="font-mono text-xs"><VulnerabilityLink type="CWE" id={threat.cwe || ''} /></TableCell>
                             </TableRow>

@@ -30,12 +30,10 @@ async function svgToPngDataUrl(svg: string, width: number, height: number): Prom
       img.onload = () => {
         ctx.drawImage(img, 0, 0, width, height);
         const pngDataUrl = canvas.toDataURL('image/png');
-        URL.revokeObjectURL(url); // Clean up blob URL
         resolve(pngDataUrl);
       };
   
       img.onerror = () => {
-        URL.revokeObjectURL(url); // Clean up blob URL
         reject(new Error('Failed to load SVG into image. This may be due to external resources like fonts in the SVG that cannot be loaded for security reasons.'));
       };
   
@@ -44,9 +42,11 @@ async function svgToPngDataUrl(svg: string, width: number, height: number): Prom
         ? svg.replace(/<svg/, '<svg xmlns="http://www.w3.org/2000/svg"') 
         : `<?xml version="1.0" standalone="no"?>\r\n${svg}`;
 
-      const svgBlob = new Blob([svgWithXmlns], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
-      img.src = url;
+      // Use a Base64 data URI to load the SVG into the image.
+      // This helps avoid cross-origin security restrictions that can occur with blob URLs.
+      // The btoa-encodeURIComponent trick is to handle UTF-8 characters correctly.
+      const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgWithXmlns)));
+      img.src = dataUri;
     });
 }
 
