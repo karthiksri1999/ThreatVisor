@@ -320,11 +320,9 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     };
 
     const handlePdfExport = async () => {
-        if (!state.threats || !state.components || !state.analyzedDsl || !resolvedTheme) return;
+        if (!state.threats || !state.components || !state.analyzedDsl) return;
         try {
-            const diagramSvg = await generateDiagramSvgForExport(state.analyzedDsl, resolvedTheme as any);
-            if (!diagramSvg) return;
-            await generatePdfReport(state.threats, state.components, state.analyzedDsl, diagramSvg);
+            await generatePdfReport(state.threats, state.components, state.analyzedDsl);
         } catch(e) {
             console.error("PDF Export failed:", e);
         }

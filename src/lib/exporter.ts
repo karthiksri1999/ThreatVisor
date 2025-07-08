@@ -5,51 +5,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 
-// Helper function to convert SVG to PNG data URL for PDF embedding
-async function svgToPngDataUrl(svg: string, width: number, height: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const canvas = document.createElement('canvas');
-      
-      // Use a scaling factor for better resolution in the PDF
-      const scale = 2;
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      const ctx = canvas.getContext('2d');
-  
-      if (!ctx) {
-        return reject(new Error('Could not get canvas context'));
-      }
-      
-      ctx.scale(scale, scale);
-  
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0);
-        const pngDataUrl = canvas.toDataURL('image/png');
-        resolve(pngDataUrl);
-      };
-  
-      img.onerror = () => {
-        reject(new Error('Failed to load SVG into image. This may be due to external resources like fonts in the SVG that cannot be loaded for security reasons.'));
-      };
-  
-      // Ensure SVG has xmlns attribute which is sometimes required for data URI loading,
-      // and sanitize it by removing web font references to prevent canvas tainting.
-      const sanitizedSvg = (svg.startsWith('<svg') 
-        ? svg.replace(/<svg/, '<svg xmlns="http://www.w3.org/2000/svg"') 
-        : `<?xml version="1.0" standalone="no"?>\r\n${svg}`)
-        .replace(/font-family:.*?Inter.*?;/g, "font-family: sans-serif;")
-        .replace(/font-family=".*?Inter.*?"/g, 'font-family="sans-serif"');
-
-      // Use a Base64 data URI to load the SVG into the image.
-      // This helps avoid cross-origin security restrictions that can occur with blob URLs.
-      // The btoa-encodeURIComponent trick is to handle UTF-8 characters correctly.
-      const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(sanitizedSvg)));
-      img.src = dataUri;
-    });
-}
-
-
 export function generateMarkdownReport(
   threatData: ThreatSuggestionsOutput,
   components: Component[],
@@ -111,8 +66,7 @@ export function generateJsonReport(
 export async function generatePdfReport(
   threatData: ThreatSuggestionsOutput,
   components: Component[],
-  dsl: string,
-  diagramSvg: string
+  dsl: string
 ) {
   const doc = new jsPDF({ orientation: 'l', unit: 'px', format: 'a4' });
   const componentMap = new Map(components.map((c) => [c.id, c.name]));
@@ -138,35 +92,6 @@ export async function generatePdfReport(
   doc.text(dslLines, margin, currentY);
   currentY += dslLines.length * 9 + 20;
 
-  // Diagram
-  if (diagramSvg) {
-    if (currentY > doc.internal.pageSize.getHeight() - 200) { // Check if there's enough space for diagram
-        doc.addPage();
-        currentY = margin;
-    }
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(16);
-    doc.text('Diagram', margin, currentY);
-    currentY += 20;
-    
-    const diagramWidth = contentWidth;
-    const diagramHeight = contentWidth / 2;
-
-    try {
-        const pngDataUrl = await svgToPngDataUrl(diagramSvg, diagramWidth, diagramHeight);
-        doc.addImage(pngDataUrl, 'PNG', margin, currentY, diagramWidth, diagramHeight);
-        currentY += diagramHeight + 20;
-    } catch(e) {
-        console.error("Failed to convert SVG to PNG for PDF export:", e);
-        doc.setFontSize(10);
-        doc.setTextColor(255, 0, 0); // Red
-        doc.text("Could not render diagram due to a processing error.", margin, currentY);
-        doc.setTextColor(0, 0, 0); // Reset to black
-        currentY += 20;
-    }
-  }
-  
   // Threats Table
   doc.setFont('helvetica', 'normal');
 
