@@ -41,7 +41,7 @@ export async function analyzeThreatsAction(
     if (!threats || !threats.threats) {
         return {
             threats: null,
-            error: 'The AI returned an empty or invalid response. Please try again or adjust your input.',
+            error: 'The analysis returned an empty or invalid response. Please try again or adjust your input.',
             components: null,
             analyzedDsl: dsl,
             analyzedMethodology: methodology,

@@ -429,7 +429,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                     <div className="flex flex-col h-full items-center justify-center p-8">
                     <Wand2 className="h-12 w-12 text-primary animate-pulse" />
                     <p className="mt-4 text-lg font-medium">Analyzing your architecture...</p>
-                    <p className="text-muted-foreground">The AI is identifying potential threats. This may take a moment.</p>
+                    <p className="text-muted-foreground">The system is identifying potential threats. This may take a moment.</p>
                     <ResultsSkeleton />
                     </div>
                 ) : state.error ? (
@@ -476,7 +476,7 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
                         <ShieldCheck className="h-12 w-12 text-primary/50 mb-4" />
                         <h3 className="text-xl font-semibold">Welcome to ThreatVisor</h3>
                         <p className="text-muted-foreground max-w-sm mx-auto mt-2">
-                            Define your architecture using our YAML-based language, choose a threat modeling methodology, and let our AI do the heavy lifting.
+                            Define your architecture using our YAML-based language, choose a threat modeling methodology, and let the system do the heavy lifting.
                         </p>
                     </div>
                 )}

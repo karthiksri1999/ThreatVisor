@@ -34,7 +34,7 @@ trust_boundaries:
     <div className="container mx-auto max-w-4xl p-4 md:p-8">
       <h1 className="text-4xl font-bold tracking-tight mb-4 text-primary">ThreatVisor Documentation</h1>
       <p className="text-lg text-muted-foreground mb-8">
-        Welcome to ThreatVisor, an AI-powered tool for modeling application architectures and automatically identifying security threats.
+        Welcome to ThreatVisor, a tool for modeling application architectures and automatically identifying security threats.
       </p>
 
       <section className="mb-12">
@@ -45,10 +45,10 @@ trust_boundaries:
             <strong className="font-semibold">Define Your Architecture:</strong> Use our simple YAML or JSON-based DSL to describe your system's components, data flows, and trust boundaries in the editor on the main page. You can start with one of the pre-built templates.
           </li>
           <li>
-            <strong className="font-semibold">Select a Methodology:</strong> Choose a standard threat modeling methodology like STRIDE, OWASP Top 10, or others from the dropdown menu. This guides the AI's analysis.
+            <strong className="font-semibold">Select a Methodology:</strong> Choose a standard threat modeling methodology like STRIDE, OWASP Top 10, or others from the dropdown menu. This guides the analysis.
           </li>
           <li>
-            <strong className="font-semibold">Analyze & Review:</strong> Click "Analyze Threats" and let the AI perform a comprehensive security analysis. Review the results in the "Threats" and "Diagram" tabs.
+            <strong className="font-semibold">Analyze & Review:</strong> Click "Analyze Threats" and let the system perform a comprehensive security analysis. Review the results in the "Threats" and "Diagram" tabs.
           </li>
         </ol>
       </section>
@@ -179,7 +179,7 @@ trust_boundaries:
       <section className="mb-12">
         <h2 className="text-3xl font-semibold tracking-tight mb-4 border-b pb-2">Threat Modeling Methodologies</h2>
         <p className="mb-4">
-          ThreatVisor supports several industry-standard methodologies. The AI's analysis will be framed by the one you choose.
+          ThreatVisor supports several industry-standard methodologies. The analysis will be framed by the one you choose.
         </p>
         <div className="grid md:grid-cols-2 gap-4">
           <Card>
