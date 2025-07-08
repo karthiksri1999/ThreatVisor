@@ -94,6 +94,7 @@ const suggestThreatsAndMitigationsFlow = ai.defineFlow(
     name: 'suggestThreatsAndMitigationsFlow',
     inputSchema: ThreatSuggestionsInputSchema,
     outputSchema: ThreatSuggestionsOutputSchema,
+    retries: 3,
   },
   async input => {
     const {output} = await prompt(input);
