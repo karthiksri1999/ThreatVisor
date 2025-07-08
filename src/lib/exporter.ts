@@ -51,7 +51,7 @@ export function generateMarkdownReport(
   threatData: ThreatSuggestionsOutput,
   components: Component[],
   dsl: string,
-  diagramSvg: string
+  diagramSvg?: string | null
 ): string {
   const componentMap = new Map(components.map((c) => [c.id, c.name]));
   let markdown = `# Threat Model Report\n\n`;
@@ -80,6 +80,28 @@ export function generateMarkdownReport(
   });
 
   return markdown;
+}
+
+
+export function generateJsonReport(
+  threatData: ThreatSuggestionsOutput,
+  components: Component[],
+  dsl: string
+): string {
+  const componentMap = new Map(components.map((c) => [c.id, c.name]));
+  const report = {
+    metadata: {
+      generatedAt: new Date().toISOString(),
+      componentCount: components.length,
+      threatCount: threatData.threats.length,
+    },
+    dsl,
+    threats: threatData.threats.map(threat => ({
+        ...threat,
+        affectedComponentName: componentMap.get(threat.affectedComponentId) || threat.affectedComponentId,
+    })),
+  };
+  return JSON.stringify(report, null, 2);
 }
 
 
