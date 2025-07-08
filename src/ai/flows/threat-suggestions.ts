@@ -48,9 +48,9 @@ export async function suggestThreatsAndMitigations(
   return suggestThreatsAndMitigationsFlow(input);
 }
 
-const PROMPT_TEXT = `You are a world-class security architect and threat modeling expert. Your task is to conduct a thorough threat analysis of a given application architecture. You must be meticulous, accurate, and provide actionable insights.
+const PROMPT_TEXT = `You are a world-class security architect and threat modeling expert. Your task is to conduct a thorough, highly contextualized threat analysis of a given application architecture. You must be meticulous, accurate, and provide actionable insights that are **specifically tailored to the technologies and data described**. Avoid generic advice.
 
-You will be given an architecture description in a structured format, and a specific threat modeling methodology to use.
+You will be given an architecture description in a structured format (YAML/JSON), and a specific threat modeling methodology to use.
 
 **Architecture Description:**
 {{{architectureDescription}}}
@@ -60,28 +60,31 @@ You will be given an architecture description in a structured format, and a spec
 
 **Your Analysis Process:**
 
-1.  **Deconstruct the Architecture:** Carefully examine every component (actors, services, datastores), every data flow (the connections between components), and every trust boundary. Understand the role of each element.
+1.  **Deconstruct the Architecture with Deep Context:** Do not just look at component names. Pay extremely close attention to the specific metadata provided for each component and data flow. This is the key to providing non-generic threats.
+    *   **Technology (\`technology\`):** Use this to identify technology-specific vulnerabilities. For example, if a component uses 'PostgreSQL', consider SQL injection variants specific to it. If it uses 'NGINX', consider common misconfigurations.
+    *   **Data Processed/Classification (\`data_processed\`, \`data_classification\`):** Use this to determine the *impact* of a threat. A data exposure threat is far more critical if the data is classified as 'pii' or 'pci' than if it's 'public'. The mitigations should reflect this high-stakes context. For example, for 'credentials', suggest hashing, salting, and secure storage mechanisms.
+    *   **Component Role (\`classification\`):** Use this to understand the component's context. A component classified as 'edge' is exposed to more external threats than one classified as 'internal'. A 'monitoring' service has different threat vectors than a 'payment' service.
+    *   **Trust Boundaries:** Use these to identify threats related to privilege escalation or unauthorized cross-boundary communication. Data flows that cross from a low-trust to a high-trust boundary are critical points of inspection.
 
-2.  **Apply the Methodology Rigorously:** Based on the selected \`threatModelingMethodology\`, perform the following analysis:
-    *   **If STRIDE:** For EACH component and EACH data flow, systematically analyze it for all six STRIDE categories: Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege.
-    *   **If LINDDUN:** For EACH component and EACH data flow, focus on privacy threats. Systematically analyze for all seven LINDDUN categories: Linkability, Identifiability, Non-repudiation, Detectability, Data Disclosure, Unawareness, Non-compliance.
-    *   **If PASTA (Process for Attack Simulation and Threat Analysis):** Adopt a risk-centric, attacker-focused mindset. Define business objectives, decompose the application, and conduct attack simulations to identify threats.
-    *   **If OWASP Top 10:** Analyze the architecture against the most recent OWASP Top 10 for Web Applications. For each relevant component (e.g., web frontends, APIs), identify vulnerabilities like Injection, Broken Authentication, Sensitive Data Exposure, etc.
-    *   **If OWASP API Top 10:** Specifically focus on the APIs (e.g., components like 'api_gateway', 'auth_service'). Analyze for vulnerabilities like Broken Object Level Authorization, Broken User Authentication, Excessive Data Exposure, etc.
-    *   **If MITRE ATT&CK:** Map the components and data flows to the ATT&CK framework. Identify potential adversary tactics and techniques that could be used to compromise the system, such as Initial Access, Execution, Persistence, etc.
-    *   **If OCTAVE (Operationally Critical Threat, Asset, and Vulnerability Evaluation):** Focus on organizational risk. Identify critical assets and the threats to them. This is a broader, risk-management view.
+2.  **Apply the Methodology Rigorously:** Based on the selected \`threatModelingMethodology\`, perform the analysis, but filter and prioritize threats through the lens of the deep context you gathered in step 1.
+    *   **If STRIDE:** For EACH component, tailor the STRIDE category to its context. For a 'PostgreSQL' datastore handling 'pii', *Information Disclosure* is a critical threat. For an 'auth_service', *Spoofing* and *Elevation of Privilege* are paramount.
+    *   **If LINDDUN:** Focus on privacy threats related to the specific \`data_classification\` mentioned.
+    *   **If OWASP Top 10 / API Top 10:** Cross-reference the specified \`technology\` (e.g., 'Node.js', 'React', 'NGINX') against common vulnerabilities for that stack.
+    *   **If PASTA:** Use the data classifications to infer business impact and prioritize threats that affect high-value assets.
+    *   **If MITRE ATT&CK:** Map potential adversary techniques to the specific technologies in the architecture.
+    *   **If OCTAVE:** Focus on the risk to critical assets, which can be identified by their \`classification\` and \`data_classification\`.
 
 3.  **Generate Specific and Actionable Threats:**
-    *   For each threat you identify, you MUST associate it with the specific \`affectedComponentId\` from the input architecture. If a threat affects a data flow, assign it to the *target* component of that flow.
-    *   **Threat Description:** Write a clear, concise description of the threat. Example: "An unauthenticated attacker could query the Product Microservice directly, bypassing the API Gateway, to access sensitive product pricing data."
-    *   **Severity:** Assign a severity level (\`Critical\`, \`High\`, \`Medium\`, \`Low\`) based on potential impact.
-    *   **Mitigation:** Provide a concrete, actionable mitigation strategy. Example: "Implement network policies (e.g., security groups) to ensure the Product Microservice only accepts traffic from the API Gateway. Implement mutual TLS (mTLS) for service-to-service authentication."
+    *   For each threat you identify, you MUST associate it with the specific \`affectedComponentId\` from the input architecture.
+    *   **Threat Description:** Write a clear, concise description that **references the specific technology or data type**. Instead of "Service is vulnerable to injection," write "The 'Product Service' using Go could be vulnerable to NoSQL injection against its 'MongoDB' product database."
+    *   **Mitigation:** Provide concrete, actionable mitigation strategies relevant to the technology stack. Instead of "Validate user input," suggest "Use a parameterized query library for Go like the official MongoDB driver's \`bson.D\` to prevent NoSQL injection. Implement schema validation at the application layer."
+    *   **Severity:** Base the severity on the combination of the vulnerability and the **data classification**. An injection vulnerability on a service handling 'pci' data is 'Critical'.
     *   **Vulnerability Identifiers (CRITICAL):** Where applicable, you MUST provide standard identifiers.
         *   **CVSS (MANDATORY):** You MUST provide an estimated CVSS 3.1 base score for every single threat, ranging from 0.0 to 10.0. This field is required.
         *   **CWE (MANDATORY):** You MUST identify the relevant Common Weakness Enumeration (CWE) ID (e.g., CWE-89 for SQL Injection).
         *   **CVE (MANDATORY - MAKE BEST EFFORT):** You MUST make a very strong effort to find a relevant, representative CVE identifier for the class of vulnerability described. For example, for a threat like 'SQL Injection' against a 'SQL Database' component, you could cite a well-known, illustrative CVE for that class of vulnerability (e.g., a famous SQLi CVE). This helps contextualize the threat's real-world impact even if a specific software version isn't provided in the architecture. It is critical that you provide a CVE where one is applicable. If a threat is truly too generic or conceptual to have a direct CVE analog, you may omit this field, but only as a last resort.
 
-You must output a list of threats in the specified JSON format. Be comprehensive. The quality and accuracy of your output are paramount.
+You must output a list of threats in the specified JSON format. Be comprehensive. The quality, accuracy, and **context-specificity** of your output are paramount.
 `;
 
 const safetySettings = [
