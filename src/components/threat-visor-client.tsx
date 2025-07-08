@@ -489,18 +489,23 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
     )
 }
 
-export function ThreatVisorClient() {
+function ThreatAnalysisSession({ onReset }: { onReset: () => void }) {
   const [state, formAction, isPending] = useActionState(analyzeThreatsAction, initialState);
+
+  return (
+    <form action={formAction} className="h-[calc(100vh-4rem)]">
+      <ThreatVisorForm state={state} isPending={isPending} onReset={onReset} />
+    </form>
+  );
+}
+
+export function ThreatVisorClient() {
   const [formKey, setFormKey] = useState(0);
 
   const handleReset = () => {
     setFormKey(prev => prev + 1);
-  }
+  };
   
   // The header is h-16 which is 4rem. 100vh - 4rem gives the remaining height for the main content.
-  return (
-    <form action={formAction} className="h-[calc(100vh-4rem)]" key={formKey}>
-      <ThreatVisorForm state={state} isPending={isPending} onReset={handleReset} />
-    </form>
-  );
+  return <ThreatAnalysisSession key={formKey} onReset={handleReset} />;
 }
