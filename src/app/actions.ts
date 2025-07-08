@@ -54,7 +54,12 @@ export async function analyzeThreatsAction(
     let errorMessage = "An unexpected error occurred during analysis.";
 
     if (e && typeof e.message === 'string') {
-      errorMessage = e.message;
+      // Check for specific, user-friendly error messages for common transient issues.
+      if (e.message.includes('503') || e.message.toLowerCase().includes('model is overloaded')) {
+          errorMessage = "The analysis service is temporarily busy and could not process the request. This can happen during peak hours. Please try again in a few moments.";
+      } else {
+        errorMessage = e.message;
+      }
     } else if (typeof e === 'string') {
       errorMessage = e;
     }
