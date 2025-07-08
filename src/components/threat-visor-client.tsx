@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TEMPLATES } from '@/lib/templates';
-import { AlertCircle, Download, FileCode, Link as LinkIcon, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
+import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StaticDiagram } from './static-diagram';
@@ -54,19 +54,21 @@ function VulnerabilityLink({ type, id }: { type: 'CVE' | 'CWE'; id: string }) {
         : `${baseUrl}${id}`;
     
     return (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline hover:text-primary">
+        <a href={href} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
             {id}
-            <LinkIcon className="h-3 w-3" />
         </a>
     )
 }
 
+type ThreatSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
+
 function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutput['threats'], components: Component[] }) {
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-    const getSeverityVariant = (severity: 'High' | 'Medium' | 'Low') => {
+    const getSeverityVariant = (severity: ThreatSeverity) => {
         switch (severity) {
-            case 'High': return 'destructive';
+            case 'Critical': return 'destructive';
+            case 'High': return 'default';
             case 'Medium': return 'secondary';
             case 'Low': return 'outline';
             default: return 'default';
@@ -79,10 +81,10 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
     };
 
     const sortedThreats = useMemo(() => {
-        const severityValues: { [key in 'High' | 'Medium' | 'Low']: number } = { High: 3, Medium: 2, Low: 1 };
+        const severityValues: { [key in ThreatSeverity]: number } = { Critical: 4, High: 3, Medium: 2, Low: 1 };
         return [...threats].sort((a, b) => {
-            const valA = severityValues[a.severity];
-            const valB = severityValues[b.severity];
+            const valA = severityValues[a.severity as ThreatSeverity];
+            const valB = severityValues[b.severity as ThreatSeverity];
             return sortOrder === 'desc' ? valB - valA : valA - valB;
         });
     }, [threats, sortOrder]);
@@ -110,7 +112,7 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
         <TableBody>
           {sortedThreats.map((threat, index) => (
             <TableRow key={index} className="even:bg-muted/30">
-              <TableCell className="pl-6"><Badge variant={getSeverityVariant(threat.severity)}>{threat.severity}</Badge></TableCell>
+              <TableCell className="pl-6"><Badge variant={getSeverityVariant(threat.severity as ThreatSeverity)}>{threat.severity}</Badge></TableCell>
               <TableCell className="font-medium">{componentMap.get(threat.affectedComponentId) || threat.affectedComponentId}</TableCell>
               <TableCell className="text-sm">{threat.threat}</TableCell>
               <TableCell className="text-sm">{threat.mitigation}</TableCell>
@@ -139,9 +141,10 @@ function ThreatDetailsPanel({ selectedNodeId, threats, components }: { selectedN
         );
     }
     
-    const getSeverityVariant = (severity: 'High' | 'Medium' | 'Low') => {
+    const getSeverityVariant = (severity: ThreatSeverity) => {
         switch (severity) {
-            case 'High': return 'destructive';
+            case 'Critical': return 'destructive';
+            case 'High': return 'default';
             case 'Medium': return 'secondary';
             case 'Low': return 'outline';
             default: return 'default';
@@ -180,7 +183,7 @@ function ThreatDetailsPanel({ selectedNodeId, threats, components }: { selectedN
                     <TableBody>
                         {filteredThreats.map((threat, index) => (
                             <TableRow key={index}>
-                                <TableCell><Badge variant={getSeverityVariant(threat.severity)}>{threat.severity}</Badge></TableCell>
+                                <TableCell><Badge variant={getSeverityVariant(threat.severity as ThreatSeverity)}>{threat.severity}</Badge></TableCell>
                                 <TableCell>{threat.threat}</TableCell>
                                 <TableCell>{threat.mitigation}</TableCell>
                                 <TableCell className="font-mono">{threat.cvss?.toFixed(1) || '-'}</TableCell>

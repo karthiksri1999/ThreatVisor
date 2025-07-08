@@ -6,8 +6,8 @@ import { parseDsl } from '@/lib/dsl-parser';
 import { suggestThreatsAndMitigations, ThreatSuggestionsInput } from '@/ai/flows/threat-suggestions';
 import { generateJsonReport, generateMarkdownReport } from '@/lib/exporter';
 
-type Severity = 'High' | 'Medium' | 'Low';
-const SEVERITY_LEVELS: Record<Severity, number> = { High: 3, Medium: 2, Low: 1 };
+type Severity = 'Critical' | 'High' | 'Medium' | 'Low';
+const SEVERITY_LEVELS: Record<Severity, number> = { Critical: 4, High: 3, Medium: 2, Low: 1 };
 
 /**
  * Parses command line arguments into a structured object.
@@ -49,7 +49,7 @@ Options:
   --methodology         The threat modeling methodology to use.
                         (e.g., STRIDE, LINDDUN, OWASP Top 10). Default: STRIDE.
   --fail-on-severity    Fail the process if threats of this level or higher are found.
-                        (e.g., High, Medium, Low). Default: High.
+                        (e.g., Critical, High, Medium, Low). Default: High.
   --output-path         Path to save the report artifact.
   --output-format       Format for the report artifact.
                         (e.g., md, json). Default: json.
@@ -119,7 +119,7 @@ async function main() {
     }
 
     const criticalThreats = results.threats.filter(
-      (threat) => SEVERITY_LEVELS[threat.severity] >= failLevel
+      (threat) => SEVERITY_LEVELS[threat.severity as Severity] >= failLevel
     );
 
     if (criticalThreats.length > 0) {

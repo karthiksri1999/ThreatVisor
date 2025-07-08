@@ -30,7 +30,7 @@ const ThreatSuggestionsOutputSchema = z.object({
     z.object({
       threat: z.string().describe('A description of the potential threat.'),
       affectedComponentId: z.string().describe('The ID of the component affected by the threat.'),
-      severity: z.enum(['High', 'Medium', 'Low']).describe('The severity level of the threat.'),
+      severity: z.enum(['Critical', 'High', 'Medium', 'Low']).describe('The severity level of the threat.'),
       mitigation: z.string().describe('Suggested mitigation strategies for the threat.'),
       cvss: z.number().describe('The CVSS 3.1 score of the threat.'),
       cve: z.string().optional().describe('The CVE identifier, if applicable (e.g., CVE-2021-44228).'),
@@ -78,7 +78,7 @@ You will be given an architecture description in a structured format, and a spec
 3.  **Generate Specific and Actionable Threats:**
     *   For each threat you identify, you MUST associate it with the specific \`affectedComponentId\` from the input architecture. If a threat affects a data flow, assign it to the *target* component of that flow.
     *   **Threat Description:** Write a clear, concise description of the threat. Example: "An unauthenticated attacker could query the Product Microservice directly, bypassing the API Gateway, to access sensitive product pricing data."
-    *   **Severity:** Assign a severity level (\`High\`, \`Medium\`, \`Low\`) based on potential impact.
+    *   **Severity:** Assign a severity level (\`Critical\`, \`High\`, \`Medium\`, \`Low\`) based on potential impact.
     *   **Mitigation:** Provide a concrete, actionable mitigation strategy. Example: "Implement network policies (e.g., security groups) to ensure the Product Microservice only accepts traffic from the API Gateway. Implement mutual TLS (mTLS) for service-to-service authentication."
     *   **Vulnerability Identifiers (CRITICAL):** Where applicable, you MUST provide standard identifiers.
         *   **CVSS (MANDATORY):** You MUST provide an estimated CVSS 3.1 base score for every single threat, ranging from 0.0 to 10.0. This field is required.
