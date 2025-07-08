@@ -41,7 +41,7 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
           <div className="text-sm text-muted-foreground">
             <h3 className="font-semibold text-foreground">License</h3>
             <p>
-              This project is licensed under the MIT License.
+              All rights reserved.
             </p>
           </div>
         </div>
