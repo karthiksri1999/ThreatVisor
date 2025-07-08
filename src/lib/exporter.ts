@@ -73,6 +73,7 @@ export async function generatePdfReport(
 
   const margin = 40;
   const docWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const contentWidth = docWidth - margin * 2;
   
   // Title
@@ -85,12 +86,24 @@ export async function generatePdfReport(
   doc.setFontSize(16);
   doc.text('Architecture Definition', margin, currentY);
   currentY += 20;
+
   doc.setFontSize(9);
   doc.setFont('courier');
   
   const dslLines = doc.splitTextToSize(dsl, contentWidth);
-  doc.text(dslLines, margin, currentY);
-  currentY += dslLines.length * 9 + 20;
+  const lineHeight = doc.getLineHeight();
+
+  dslLines.forEach((line: string) => {
+    if (currentY + lineHeight > pageHeight - margin) {
+      doc.addPage();
+      currentY = margin;
+    }
+    doc.text(line, margin, currentY);
+    currentY += lineHeight;
+  });
+
+  // Add some space after the DSL block
+  currentY += 20;
 
   // Threats Table
   doc.setFont('helvetica', 'normal');
