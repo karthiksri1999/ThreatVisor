@@ -6,7 +6,7 @@ import mermaid from 'mermaid';
 import { useTheme } from 'next-themes';
 import { parseDsl } from '@/lib/dsl-parser';
 import { Button } from './ui/button';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Maximize } from 'lucide-react';
 import { dslToMermaid, initializeMermaid } from '@/lib/mermaid-utils';
 
 type StaticDiagramProps = {
@@ -20,6 +20,7 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   const [diagram, setDiagram] = useState('');
   const [dslError, setDslError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
 
   // Mermaid's click handler needs to be on the window object
@@ -46,6 +47,29 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
   }, [dsl]);
 
 
+  const handleFitToScreen = () => {
+    if (!containerRef.current || !viewportRef.current) return;
+    const svg = containerRef.current.querySelector('svg');
+    if (!svg) return;
+
+    const viewportWidth = viewportRef.current.clientWidth;
+    const viewportHeight = viewportRef.current.clientHeight;
+
+    // The SVG's width/height attributes might not be reliable, use getBBox
+    const { width: svgWidth, height: svgHeight } = svg.getBBox();
+    
+    if (svgWidth === 0 || svgHeight === 0) return;
+
+    const padding = 32; // Add some padding
+    const scaleX = (viewportWidth - padding) / svgWidth;
+    const scaleY = (viewportHeight - padding) / svgHeight;
+
+    const newZoom = Math.min(scaleX, scaleY);
+    // Clamp the auto-fit zoom to reasonable bounds
+    setZoom(Math.min(Math.max(0.1, newZoom), 5));
+  };
+
+
   // Render the diagram with Mermaid when the syntax or theme changes
   useEffect(() => {
     if (!diagram || !containerRef.current) return;
@@ -58,6 +82,13 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
 
     mermaid.run({
       nodes: container.querySelectorAll('.mermaid'),
+      suppressErrors: true,
+    }).then(() => {
+        // After rendering, fit the diagram to the screen.
+        // A small delay ensures the bounding box is calculated correctly.
+        setTimeout(handleFitToScreen, 100);
+    }).catch(err => {
+        console.error("Mermaid rendering failed:", err);
     });
 
   }, [diagram, resolvedTheme]);
@@ -82,10 +113,10 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
 
 
   const handleZoom = (direction: 'in' | 'out') => {
-    const zoomStep = 0.1;
+    const zoomStep = 0.25;
     setZoom(prevZoom => {
         const newZoom = direction === 'in' ? prevZoom + zoomStep : prevZoom - zoomStep;
-        return Math.min(Math.max(0.2, newZoom), 2); // Clamp zoom level
+        return Math.min(Math.max(0.2, newZoom), 5); // Clamp zoom level up to 500%
     });
   };
 
@@ -119,8 +150,8 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
             }
             `}
         </style>
-       <div className="h-full w-full overflow-auto p-4 flex justify-center items-start">
-        <div className="zoom-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
+       <div ref={viewportRef} className="h-full w-full overflow-auto p-4 flex justify-center items-center">
+        <div className="zoom-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
             <div
                 ref={containerRef}
                 className="mermaid-container"
@@ -136,6 +167,9 @@ export function StaticDiagram({ dsl, selectedNodeId, onNodeSelect }: StaticDiagr
             </span>
             <Button type="button" variant="outline" size="icon" onClick={() => handleZoom('in')} aria-label="Zoom in">
                 <Plus className="h-4 w-4" />
+            </Button>
+            <Button type="button" variant="outline" size="icon" onClick={handleFitToScreen} aria-label="Fit to screen">
+                <Maximize className="h-4 w-4" />
             </Button>
        </div>
     </div>
