@@ -48,11 +48,7 @@ export async function suggestThreatsAndMitigations(
   return suggestThreatsAndMitigationsFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'threatSuggestionsPrompt',
-  input: {schema: ThreatSuggestionsInputSchema},
-  output: {schema: ThreatSuggestionsOutputSchema},
-  prompt: `You are a world-class security architect and threat modeling expert. Your task is to conduct a thorough threat analysis of a given application architecture. You must be meticulous, accurate, and provide actionable insights.
+const PROMPT_TEXT = `You are a world-class security architect and threat modeling expert. Your task is to conduct a thorough threat analysis of a given application architecture. You must be meticulous, accurate, and provide actionable insights.
 
 You will be given an architecture description in a structured format, and a specific threat modeling methodology to use.
 
@@ -86,7 +82,22 @@ You will be given an architecture description in a structured format, and a spec
         *   **CVE (MANDATORY - MAKE BEST EFFORT):** You MUST make a very strong effort to find a relevant, representative CVE identifier for the class of vulnerability described. For example, for a threat like 'SQL Injection' against a 'SQL Database' component, you could cite a well-known, illustrative CVE for that class of vulnerability (e.g., a famous SQLi CVE). This helps contextualize the threat's real-world impact even if a specific software version isn't provided in the architecture. It is critical that you provide a CVE where one is applicable. If a threat is truly too generic or conceptual to have a direct CVE analog, you may omit this field, but only as a last resort.
 
 You must output a list of threats in the specified JSON format. Be comprehensive. The quality and accuracy of your output are paramount.
-`,
+`;
+
+const primaryPrompt = ai.definePrompt({
+  name: 'threatSuggestionsPrompt',
+  input: {schema: ThreatSuggestionsInputSchema},
+  output: {schema: ThreatSuggestionsOutputSchema},
+  prompt: PROMPT_TEXT,
+  // This will use the default model configured in genkit.ts ('gemini-2.0-flash')
+});
+
+const fallbackPrompt = ai.definePrompt({
+  name: 'threatSuggestionsFallbackPrompt',
+  model: 'googleai/gemini-1.5-flash', // Use a different, reliable model as a fallback
+  input: {schema: ThreatSuggestionsInputSchema},
+  output: {schema: ThreatSuggestionsOutputSchema},
+  prompt: PROMPT_TEXT,
 });
 
 const suggestThreatsAndMitigationsFlow = ai.defineFlow(
@@ -94,10 +105,28 @@ const suggestThreatsAndMitigationsFlow = ai.defineFlow(
     name: 'suggestThreatsAndMitigationsFlow',
     inputSchema: ThreatSuggestionsInputSchema,
     outputSchema: ThreatSuggestionsOutputSchema,
-    retries: 3,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+        console.log("Attempting analysis with primary model...");
+        const {output} = await primaryPrompt(input);
+        return output!;
+    } catch (e: any) {
+        // If the primary model is overloaded, automatically try the fallback model.
+        if (e.message && (e.message.includes('503') || e.message.toLowerCase().includes('overloaded'))) {
+            console.warn("Primary model failed due to overload. Attempting fallback model...");
+            try {
+                const {output} = await fallbackPrompt(input);
+                console.log("Fallback model succeeded.");
+                return output!;
+            } catch (fallbackError: any) {
+                console.error("Fallback model also failed:", fallbackError);
+                // Throw a more generic, but still informative error if the fallback also fails.
+                throw new Error("The analysis service is currently experiencing high demand and both primary and fallback services were unavailable. Please try again in a few minutes.");
+            }
+        }
+        // Re-throw any other type of error.
+        throw e;
+    }
   }
 );
