@@ -84,12 +84,34 @@ You will be given an architecture description in a structured format, and a spec
 You must output a list of threats in the specified JSON format. Be comprehensive. The quality and accuracy of your output are paramount.
 `;
 
+const safetySettings = [
+  {
+    category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+    threshold: 'BLOCK_ONLY_HIGH',
+  },
+  {
+    category: 'HARM_CATEGORY_HATE_SPEECH',
+    threshold: 'BLOCK_ONLY_HIGH',
+  },
+  {
+    category: 'HARM_CATEGORY_HARASSMENT',
+    threshold: 'BLOCK_ONLY_HIGH',
+  },
+  {
+    category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+    threshold: 'BLOCK_ONLY_HIGH',
+  },
+];
+
 const primaryPrompt = ai.definePrompt({
   name: 'threatSuggestionsPrompt',
   input: {schema: ThreatSuggestionsInputSchema},
   output: {schema: ThreatSuggestionsOutputSchema},
   prompt: PROMPT_TEXT,
   // This will use the default model configured in genkit.ts ('gemini-2.0-flash')
+  config: {
+    safetySettings,
+  },
 });
 
 const fallbackPrompt = ai.definePrompt({
@@ -98,6 +120,9 @@ const fallbackPrompt = ai.definePrompt({
   input: {schema: ThreatSuggestionsInputSchema},
   output: {schema: ThreatSuggestionsOutputSchema},
   prompt: PROMPT_TEXT,
+  config: {
+    safetySettings,
+  },
 });
 
 const suggestThreatsAndMitigationsFlow = ai.defineFlow(
