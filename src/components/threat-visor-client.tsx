@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TEMPLATES } from '@/lib/templates';
-import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown } from 'lucide-react';
+import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown, Maximize } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { StaticDiagram } from './static-diagram';
@@ -260,38 +260,61 @@ function ThreatVisorForm({ state, isPending, onReset }: { state: typeof initialS
 
     /**
      * Generates a "clean" SVG for exporting. This function renders the diagram headlessly
-     * with specific options to make it safe for conversion to other formats like PNG,
-     * avoiding browser security errors related to external resources or complex HTML.
+     * using the reliable `mermaid.run()` API, which is what the main diagram viewer uses.
      * @param dslString The architecture definition string.
      * @returns A promise that resolves with the clean SVG string.
      */
     const generateDiagramSvgForExport = (dslString: string, theme: 'dark' | 'light' | 'default'): Promise<string> => {
-        const parsedDsl = parseDsl(dslString);
-        // Generate a definition that is safe for export (no complex HTML or icons).
-        const mermaidGraph = dslToMermaid(parsedDsl, {
-            interactive: false,
-            includeIcons: false, // Prevents <foreignObject> which can taint canvas
-            useHtmlLabels: false, // Prevents <br> which can also taint canvas
-        });
-
-        return new Promise<string>(async (resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
+            let tempContainer: HTMLDivElement | null = null;
             try {
-                // Dynamically import mermaid to ensure it's only loaded on the client-side
-                // and to avoid potential bundling issues where `document` is not available.
                 const mermaid = (await import('mermaid')).default;
-                
-                // IMPORTANT: Mermaid MUST be initialized before calling render.
                 initializeMermaid(theme);
-                
-                mermaid.render(`headless-export-${Date.now()}`, mermaidGraph, (svgCode) => {
-                    // The output of mermaid.render might still contain the 'Inter' font from global config.
-                    // Replace it with a generic font to be 100% safe.
-                    const finalSvg = svgCode.replace(/font-family:\s*['"]Inter['"]/g, "font-family: 'sans-serif'");
-                    resolve(finalSvg);
+
+                const parsedDsl = parseDsl(dslString);
+                const mermaidGraph = dslToMermaid(parsedDsl, {
+                    interactive: false,
+                    includeIcons: false, // Prevents <foreignObject> which can taint canvas
+                    useHtmlLabels: false, // Prevents <br> which can also taint canvas
                 });
+                
+                // Create a temporary, hidden container for mermaid to render into
+                tempContainer = document.createElement('div');
+                tempContainer.style.visibility = 'hidden';
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.top = '-9999px';
+                document.body.appendChild(tempContainer);
+
+                // This is the structure mermaid.run expects
+                const mermaidDiv = document.createElement('div');
+                mermaidDiv.classList.add('mermaid');
+                mermaidDiv.textContent = mermaidGraph;
+                tempContainer.appendChild(mermaidDiv);
+
+                await mermaid.run({
+                    nodes: [mermaidDiv],
+                    suppressErrors: false,
+                });
+                
+                const svg = tempContainer.querySelector('svg');
+                if (!svg) {
+                    throw new Error("Mermaid failed to generate an SVG element.");
+                }
+                
+                svg.removeAttribute('id');
+                
+                const svgCode = svg.outerHTML;
+                const finalSvg = svgCode.replace(/font-family:\s*['"]Inter['"]/g, "font-family: 'sans-serif'");
+                resolve(finalSvg);
+
             } catch (e) {
                 console.error("Headless mermaid render failed:", e);
                 reject(new Error("Failed to render diagram for export."));
+            } finally {
+                // Cleanup: always remove the temporary container
+                if (tempContainer) {
+                    document.body.removeChild(tempContainer);
+                }
             }
         });
     };
@@ -509,3 +532,5 @@ export function ThreatVisorClient() {
   // The header is h-16 which is 4rem. 100vh - 4rem gives the remaining height for the main content.
   return <ThreatAnalysisSession key={formKey} onReset={handleReset} />;
 }
+
+    
