@@ -68,8 +68,8 @@ function ThreatsTable({ threats, components }: { threats: ThreatSuggestionsOutpu
     const getSeverityVariant = (severity: ThreatSeverity) => {
         switch (severity) {
             case 'Critical': return 'destructive';
-            case 'High': return 'default';
-            case 'Medium': return 'secondary';
+            case 'High': return 'high';
+            case 'Medium': return 'medium';
             case 'Low': return 'outline';
             default: return 'default';
         }
@@ -144,8 +144,8 @@ function ThreatDetailsPanel({ selectedNodeId, threats, components }: { selectedN
     const getSeverityVariant = (severity: ThreatSeverity) => {
         switch (severity) {
             case 'Critical': return 'destructive';
-            case 'High': return 'default';
-            case 'Medium': return 'secondary';
+            case 'High': return 'high';
+            case 'Medium': return 'medium';
             case 'Low': return 'outline';
             default: return 'default';
         }
