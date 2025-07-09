@@ -54,8 +54,10 @@ export async function analyzeThreatsAction(
     let errorMessage = "An unexpected error occurred during analysis.";
 
     if (e && typeof e.message === 'string') {
-      // Check for specific, user-friendly error messages for common transient issues.
-      if (e.message.includes('503') || e.message.toLowerCase().includes('model is overloaded')) {
+      // Check for specific, user-friendly error messages.
+      if (e.message.includes('API key not valid')) {
+        errorMessage = 'Your Google AI API key is missing or invalid. Please add a valid GOOGLE_API_KEY to your .env file and restart the server. Refer to the README.md for instructions.';
+      } else if (e.message.includes('503') || e.message.toLowerCase().includes('model is overloaded')) {
           errorMessage = "The analysis service is temporarily busy and could not process the request. This can happen during peak hours. Please try again in a few moments.";
       } else {
         errorMessage = e.message;
