@@ -2,6 +2,7 @@
 'use client';
 
 import { useActionState, useEffect, useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -21,7 +22,6 @@ import { TEMPLATES } from '@/lib/templates';
 import { AlertCircle, Download, FileCode, Loader2, Sparkles, Wand2, ShieldCheck, Database, Server, User, ArrowUp, ArrowDown, Maximize } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { StaticDiagram } from './static-diagram';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ThreatSuggestionsOutput } from '@/ai/flows/threat-suggestions';
 import { Badge } from './ui/badge';
@@ -33,6 +33,11 @@ import { dslToMermaid, initializeMermaid } from '@/lib/mermaid-utils';
 import { parseDsl } from '@/lib/dsl-parser';
 import { useTheme } from 'next-themes';
 
+
+const StaticDiagram = dynamic(() => import('./static-diagram').then(m => m.StaticDiagram), {
+    ssr: false,
+    loading: () => <div className="h-full w-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+});
 
 const initialState = {
   threats: null,
