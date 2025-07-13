@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "ThreatVisor",
   description: "Threat Modeling as Code",
   icons: {
-    icon: "Images/favicon.ico", // Main browser favicon
+    icon: "/favicon.ico", // Main browser favicon
   },
 };
 
