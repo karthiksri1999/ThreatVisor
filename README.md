@@ -71,3 +71,5 @@ The application will be accessible at `http://localhost:3000`.
 ![ThreatVisor Threats](./Images/Image2.png)
 
 ![ThreatVisor Diagram](./Images/Image3.png)
+
+![ThreatVisor Compare Models](./Images/Image4.png)
