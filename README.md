@@ -66,7 +66,7 @@ docker run -p 3000:3000 -e GOOGLE_API_KEY="YOUR_API_KEY_HERE" threatvisor
 
 The application will be accessible at `http://localhost:3000`.
 
-Here are some screenshots of the application:
+### Here are some screenshots of the application:
 
 ![ThreatVisor Threats](./Images/Image2.png)
 
