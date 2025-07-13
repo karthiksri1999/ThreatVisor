@@ -1,3 +1,4 @@
+# .dockerignore file that specifies which files and directories
 .git
 .next
 .vscode
