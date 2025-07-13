@@ -6,13 +6,8 @@ import { Header } from "@/components/header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ThreatVisor",
-  description: "Threat Modeling as Code",
-  icons: {
-    icon: "/favicon-new.ico", // Main favicon
-    shortcut: "/favicon-96x96.png",
-    apple: "/apple-touch-icon.png",
-  },
+  title: 'ThreatVisor',
+  description: 'Threat Modeling as Code',
 };
 
 export default function RootLayout({
