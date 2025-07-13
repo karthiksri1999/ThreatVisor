@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "ThreatVisor",
   description: "Threat Modeling as Code",
   icons: {
-    icon: "/favicon.ico", // Main favicon
+    icon: "/favicon-new.ico", // Main favicon
     shortcut: "/favicon-96x96.png",
     apple: "/apple-touch-icon.png",
   },
@@ -40,7 +40,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
           referrerPolicy="no-referrer"
         />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon-new.ico" sizes="any" />
         <link rel="shortcut icon" href="/favicon-96x96.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
