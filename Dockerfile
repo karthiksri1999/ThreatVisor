@@ -16,6 +16,7 @@ COPY . .
 # The Genkit CLI needs to be available to build
 RUN npm install -g genkit-cli
 
+# Install project dependencies
 RUN npm run build
 
 # 3. Run the app
