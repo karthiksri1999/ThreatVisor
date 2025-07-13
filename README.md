@@ -1,5 +1,7 @@
 # ThreatVisor
 
+![ThreatVisor UI](./Images/Image1.png)
+
 This is a Next.js application for threat modeling as code.
 
 To get started, take a look at `src/app/page.tsx`.
