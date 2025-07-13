@@ -1,13 +1,16 @@
-import type { Metadata } from 'next';
-import { ThemeProvider } from '@/components/theme-provider';
-import { Toaster } from "@/components/ui/toaster"
-import { cn } from '@/lib/utils';
-import { Header } from '@/components/header';
-import './globals.css';
+import type { Metadata } from "next";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import { cn } from "@/lib/utils";
+import { Header } from "@/components/header";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'ThreatVisor',
-  description: 'Threat Modeling as Code',
+  title: "ThreatVisor",
+  description: "Threat Modeling as Code",
+  icons: {
+    icon: "Images/favicon.ico", // Main browser favicon
+  },
 };
 
 export default function RootLayout({
@@ -19,23 +22,25 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
-        <link 
-            rel="stylesheet" 
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" 
-            integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" 
-            crossOrigin="anonymous" 
-            referrerPolicy="no-referrer" 
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+          integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
         />
       </head>
       <body
-        className={cn(
-          'min-h-screen bg-background font-body antialiased'
-        )}
+        className={cn("min-h-screen bg-background font-body antialiased")}
         suppressHydrationWarning
       >
         <ThemeProvider
@@ -44,10 +49,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-            </div>
+          <div className="relative flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+          </div>
           <Toaster />
         </ThemeProvider>
       </body>
