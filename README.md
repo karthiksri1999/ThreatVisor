@@ -14,8 +14,8 @@ You can run this application on your local machine for development or testing.
 
 ### Prerequisites
 
-*   [Node.js](https://nodejs.org/) (version 18 or later)
-*   [npm](https://www.npmjs.com/)
+- [Node.js](https://nodejs.org/) (version 18 or later)
+- [npm](https://www.npmjs.com/)
 
 ### Environment Setup
 
@@ -32,6 +32,7 @@ The core threat analysis feature requires a Google AI API key.
 ### Installation & Running
 
 1.  Install the project dependencies:
+
     ```bash
     npm install
     ```
@@ -64,3 +65,9 @@ docker run -p 3000:3000 -e GOOGLE_API_KEY="YOUR_API_KEY_HERE" threatvisor
 ```
 
 The application will be accessible at `http://localhost:3000`.
+
+Here are some screenshots of the application:
+
+![ThreatVisor Threats](./Images/Image2.png)
+
+![ThreatVisor Diagram](./Images/Image3.png)
