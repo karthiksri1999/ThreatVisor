@@ -31,12 +31,6 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
           <div className="text-sm text-muted-foreground">
             <h3 className="font-semibold text-foreground">Created By</h3>
             <p>Karthik Srikanth</p>
-            <a
-              href="mailto:karthiksrikanth535@gmail.com"
-              className="text-primary underline"
-            >
-              karthiksrikanth535@gmail.com
-            </a>
           </div>
           <div className="text-sm text-muted-foreground">
             <h3 className="font-semibold text-foreground">License</h3>
